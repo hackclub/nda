@@ -1,0 +1,43 @@
+<article class="contract<%= " #{local_assigns[:css]}" if local_assigns[:css] %>">
+  <h2><%= NdaDocument::TITLE %></h2>
+  <% if local_assigns[:signature] %>
+    <div class="contract-parties">
+      <h3>Recipient information (“Recipient”)</h3>
+      <p><strong>Full name:</strong> <%= signature.user.legal_name %><br>
+        <strong>Email:</strong> <%= signature.user.email %><br>
+        <strong>Slack ID:</strong> <%= signature.user.slack_id %></p>
+      <h3>Co-signer information (if under 18, “Co-signer”)</h3>
+      <p><strong>Full name:</strong> <%= signature.cosigner_name %><br>
+        <strong>Email:</strong> <%= signature.cosigner_email %></p>
+    </div>
+  <% end %>
+  <% NdaDocument::INTRODUCTION.each do |type, text| %>
+    <%= content_tag(type == :subhead ? :h4 : :p, text, class: "contract-#{type}") %>
+  <% end %>
+  <% NdaDocument::SECTIONS.each do |title, blocks| %>
+    <h3><%= title %></h3>
+    <% blocks.each do |type, text| %>
+      <%= content_tag(type == :subhead ? :h4 : :p, text, class: "contract-#{type}") %>
+    <% end %>
+  <% end %>
+  <% if local_assigns[:signature] %>
+    <div class="signature-line">
+      <h3>AGREED</h3>
+      <p><strong>Recipient Signature:</strong> <%= signature.signed_name %><br>
+        <strong>Printed Name:</strong> <%= signature.user.legal_name %><br>
+        <strong>Date:</strong> <%= signature.signed_at.to_fs(:long) %></p>
+      <% if signature.cosigner_name.present? %>
+        <p><strong>Co-signer Signature:</strong> <%= signature.cosigner_name %><br>
+          <strong>Printed Name:</strong> <%= signature.cosigner_name %><br>
+          <strong>Date:</strong> <%= signature.signed_at.to_fs(:long) %></p>
+      <% end %>
+    </div>
+    <div class="print-certificate">
+      <h3>Signing certificate</h3>
+      <p><strong>Slack ID:</strong> <%= signature.user.slack_id %><br>
+        <strong>Document version:</strong> <%= signature.document_version %><br>
+        <strong>Signed at:</strong> <%= signature.signed_at.utc.iso8601 %></p>
+    </div>
+  <% end %>
+  <p class="contract-footer"><%= NdaDocument::FOOTER %></p>
+</article>

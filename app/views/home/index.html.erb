@@ -1,0 +1,17 @@
+<% content_for :title, "Hack Club NDA" %>
+<% content_for :body_class, "home-page" %>
+
+<section class="minimal-home">
+  <div class="minimal-home-copy">
+    <h1>Hack Club NDA</h1>
+    <p>If you've been asked to sign this, it's because you're probably about to get access to a Hack Club system that contains sensitive data.</p>
+    <p>This is a big responsibility. Sign this to affirm that you will never misuse your access and will keep any private data confidential.</p>
+    <% if current_user %>
+      <%= link_to(@current_signature ? "View signed NDA" : "Continue signing", nda_signature_path, class: "minimal-home-button") %>
+    <% else %>
+      <%= link_to "Sign in", login_path, class: "minimal-home-button" %>
+    <% end %>
+  </div>
+
+  <span class="minimal-home-api">Public API - <a href="https://github.com/hackclub/nda">Open Source</a></span>
+</section>

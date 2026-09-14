@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: nda
+      POSTGRES_PASSWORD: nda
+      POSTGRES_DB: nda_development
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nda -d nda_development"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "55439:5432"
+
+  web:
+    build:
+      context: .
+      target: build
+    command: bash -c "bin/rails db:prepare && bin/rails server -b 0.0.0.0"
+    environment:
+      RAILS_ENV: development
+      DATABASE_URL: postgres://nda:nda@db:5432/nda_development
+      HACK_CLUB_CLIENT_ID: ${HACK_CLUB_CLIENT_ID:-}
+      HACK_CLUB_CLIENT_SECRET: ${HACK_CLUB_CLIENT_SECRET:-}
+      HACK_CLUB_REDIRECT_URI: ${HACK_CLUB_REDIRECT_URI:-http://localhost:3000/auth/hack_club/callback}
+      XAI_API_KEY: ${XAI_API_KEY:-}
+    volumes:
+      - .:/rails
+      - node_modules:/rails/node_modules
+      - uploads:/rails/storage
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  vite:
+    image: dhi.io/bun:1-debian13-dev
+    working_dir: /rails
+    command: bun run dev --host 0.0.0.0
+    environment:
+      RAILS_ENV: development
+    volumes:
+      - .:/rails
+      - node_modules:/rails/node_modules
+    ports:
+      - "3036:3036"
+
+volumes:
+  postgres_data:
+  node_modules:
+  uploads:

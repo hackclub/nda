@@ -1,0 +1,45 @@
+<% if @signature %>
+  <% content_for :title, "Hack Club Contributor NDA" %>
+  <section class="shell receipt">
+    <div class="success-mark">✓</div><h1>Your NDA is signed!</h1>
+    <p>Thanks for signing! Others can verify your signature using your Slack ID: <strong><%= current_user.slack_id %></strong>.</p>
+    <dl><div><dt>Signed by</dt><dd><%= @signature.signed_name %></dd></div><div><dt>Signed at</dt><dd><time datetime="<%= @signature.signed_at.iso8601 %>" data-local-time><%= @signature.signed_at.to_fs(:long) %></time></dd></div><div><dt>Document version</dt><dd><%= @signature.document_version %></dd></div></dl>
+    <button type="button" class="button button-dark" data-print>Print agreement</button>
+    <%= render "document", css: "print-contract", signature: @signature %>
+  </section>
+<% else %>
+  <% content_for :title, "Sign the Hack Club NDA" %>
+  <section class="form-shell" data-wizard data-initial-step="<%= @retry_video ? 2 : 1 %>">
+    <div class="progress"><div class="progress-step active"><b>1</b><span>Your details</span></div><i></i><div class="progress-step"><b>2</b><span>Video pledge</span></div><i></i><div class="progress-step"><b>3</b><span>Sign contract</span></div></div>
+    <%= form_with url: nda_signature_path, multipart: true, class: "wizard-form", data: { wizard_form: true } do |form| %>
+      <section class="form-card wizard-panel active" data-step="1">
+        <p class="lede">If you've been asked to sign this, it's because you're probably about to get access to a Hack Club system that contains sensitive data. This is a big responsibility. Sign this to affirm that you will never misuse your access and will keep any private data confidential.</p>
+        <div class="field-grid two"><label>Legal first name *<%= text_field_tag "user[legal_first_name]", current_user.default_legal_first_name, required: true, autocomplete: "given-name" %></label><label>Legal last name *<%= text_field_tag "user[legal_last_name]", current_user.default_legal_last_name, required: true, autocomplete: "family-name" %></label></div>
+        <div class="field-grid two"><label>Email *<small>Must match the email you use on Slack.</small><%= email_field_tag "user[email]", current_user.email, required: true, autocomplete: "email" %></label><label>Date of birth *<small>Full date, including year.</small><%= date_field_tag "user[birthdate]", current_user.birthdate, required: true, max: Date.current, autocomplete: "bday" %></label></div>
+        <label>Physical address *<small>Your current home address.</small><%= text_field_tag "user[address_line_1]", current_user.address_line_1, required: true, autocomplete: "address-line1" %></label>
+        <label>Address line 2 <small>Optional</small><%= text_field_tag "user[address_line_2]", current_user.address_line_2, autocomplete: "address-line2" %></label>
+        <div class="field-grid three"><label>City *<%= text_field_tag "user[city]", current_user.city, required: true, autocomplete: "address-level2" %></label><label>State / province *<%= text_field_tag "user[region]", current_user.region, required: true, autocomplete: "address-level1" %></label><label>ZIP / postal code *<%= text_field_tag "user[postal_code]", current_user.postal_code, required: true, autocomplete: "postal-code" %></label></div>
+        <label>Country *<div class="country-select" data-country><img class="country-flag" data-country-flag alt="" width="22" height="22" hidden><%= select_tag "user[country]", options_for_select(Country.select_options, current_user.country), include_blank: "Select your country", required: true, autocomplete: "country-name", data: { country_native: true } %></div></label>
+        <div class="cosigner-fields" data-cosigner hidden><h3>Co-Signer Information</h3><p>Because you're under the age of 18, we need a co-signer. This should be a parent or guardian.</p><div class="field-grid two"><label>Co-signer full name *<%= text_field_tag :cosigner_name, @cosigner_name, autocomplete: "off" %></label><label>Co-signer email *<%= email_field_tag :cosigner_email, @cosigner_email, autocomplete: "off" %></label></div></div>
+        <button type="button" class="button button-primary" data-next>Next <span>→</span></button>
+      </section>
+      <section class="form-card wizard-panel" data-step="2" hidden>
+        <p class="lede">Upload a video with your face clearly visible and your right hand raised. Read the following aloud:</p>
+        <blockquote data-pledge><p data-pledge-intro>Complete your details in step one to generate your pledge.</p><% PledgeScript::BODY.each do |paragraph| %><p><%= paragraph %></p><% end %></blockquote>
+        <label class="upload-zone" data-dropzone><span class="upload-icon">↑</span><strong>Drop your video here or <u>browse</u></strong><small id="identity-video-help">MP4 or WebM only · maximum 25 MB</small><%= file_field_tag :identity_video, accept: ".mp4,.webm,video/mp4,video/webm", required: true, aria: { describedby: "identity-video-help identity-video-error" } %></label>
+        <div class="upload-feedback"><p id="identity-video-error" class="upload-error" data-upload-error role="alert" hidden></p><button type="button" class="remove-file" data-remove-file hidden>Remove file</button></div>
+        <p class="recorder-note">Need to record your video? We recommend <a href="https://www.cam-recorder.com/" target="_blank" rel="noopener noreferrer">Cam Recorder</a>.</p>
+        <p class="validation-note"><span>✦</span>Your audio is processed by SpaceXAI to ensure it matches your pledge. We enforce a <a href="https://docs.x.ai/developers/faq/security#what-is-zero-data-retention-zdr">ZDR (Zero Data Retention)</a> policy with them so no audio data is stored after processing. Your pledge video is stored for a maximum of 7 days in <a href="https://developers.cloudflare.com/r2/examples/ssec/">Cloudflare R2 using SSE-C encryption</a> for the purposes of debugging.</p>
+        <div class="button-row"><button type="button" class="button button-secondary" data-back>Back</button><button type="button" class="button button-primary" data-next>Review contract <span>→</span></button></div>
+      </section>
+      <section class="form-card wizard-panel" data-step="3" hidden>
+        <p class="lede">Read the complete agreement and sign when you're ready.</p>
+        <%= render "document" %>
+        <label>Type your full legal name *<%= text_field_tag :signed_name, @signed_name, required: true, autocomplete: "name" %></label>
+        <label class="check-row"><%= check_box_tag :accepted, "1", false, required: true %><span>I have read and agree to this Mutual Non-Disclosure Agreement and intend this electronic signature to be binding.</span></label>
+        <p class="processing-status" data-processing-status role="status" hidden><strong>Video submitted.</strong> Uploading, transcribing, and checking your pledge can take up to two minutes. Keep this page open.</p>
+        <div class="button-row"><button type="button" class="button button-secondary" data-back>Back</button><%= form.submit "Validate video & sign", class: "button button-primary", data: { submit_label: true } %></div>
+      </section>
+    <% end %>
+  </section>
+<% end %>

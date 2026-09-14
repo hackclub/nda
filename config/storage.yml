@@ -1,0 +1,20 @@
+test:
+  service: Disk
+  root: <%= Rails.root.join("tmp/storage") %>
+
+local:
+  service: Disk
+  root: <%= Rails.root.join("storage") %>
+
+cloudflare:
+  service: S3
+  access_key_id: <%= ENV["R2_ACCESS_KEY_ID"] %>
+  secret_access_key: <%= ENV["R2_SECRET_ACCESS_KEY"] %>
+  endpoint: <%= ENV["R2_ENDPOINT"] %>
+  bucket: <%= ENV["R2_BUCKET"] %>
+  region: auto
+  request_checksum_calculation: when_required
+  response_checksum_validation: when_required
+  upload:
+    sse_customer_algorithm: AES256
+    sse_customer_key: "<%= ENV["R2_SSE_CUSTOMER_KEY"] %>"

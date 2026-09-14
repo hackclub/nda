@@ -1,0 +1,13 @@
+one:
+  hack_club_identity_id: ident!one
+  slack_id: U0123ABCDE
+  first_name: Ada
+  last_name: Lovelace
+  email: ada@example.com
+
+two:
+  hack_club_identity_id: ident!two
+  slack_id: U9876ZYXWV
+  first_name: Grace
+  last_name: Hopper
+  email: grace@example.com
