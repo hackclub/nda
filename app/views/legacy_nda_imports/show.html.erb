@@ -1,0 +1,61 @@
+<% content_for :title, "Import your existing NDA" %>
+<section class="shell legacy-import">
+  <% if @import&.approved? %>
+    <div class="success-mark">✓</div><h1>Your old NDA is on file!</h1>
+    <p>We've imported the agreement you signed through our old signing system. Others can verify it
+       using your Slack ID: <strong><%= current_user.slack_id %></strong>.</p>
+    <dl>
+      <div><dt>Signed by</dt><dd><%= @import.nda_signature.signed_name %></dd></div>
+      <div><dt>Signed at</dt><dd><time datetime="<%= @import.nda_signature.signed_at.iso8601 %>" data-local-time><%= @import.nda_signature.signed_at.to_fs(:long) %></time></dd></div>
+      <div><dt>Document version</dt><dd><%= @import.nda_signature.document_version %></dd></div>
+      <div><dt>Source</dt><dd>Imported from the old signing system</dd></div>
+    </dl>
+
+  <% elsif @import&.needs_review? %>
+    <h1>We're taking a closer look</h1>
+    <p>Your document checked out, but a couple of details didn't line up neatly enough for us to
+       file it automatically. Someone from Hack Club will review it by hand. You don't need to do
+       anything else, and we'll message you on Slack when it's done.</p>
+
+  <% elsif @import&.challenge_pending? %>
+    <h1>Confirm your email</h1>
+    <p>The NDA you uploaded was signed from a different email address than your Hack Club account.
+       We've sent a six-digit code to <strong><%= @import.masked_challenge_email %></strong> so you
+       can confirm it's yours.</p>
+    <%= form_with url: challenge_legacy_nda_import_path, class: "wizard-form" do |form| %>
+      <div class="form-card">
+        <label>Six-digit code<%= text_field_tag :code, nil, required: true, autocomplete: "one-time-code", inputmode: "numeric", pattern: "[0-9]{6}" %></label>
+        <%= form.submit "Confirm", class: "button button-primary" %>
+      </div>
+    <% end %>
+
+  <% elsif @import && (@import.pending? || @import.verifying?) %>
+    <h1>Checking your document</h1>
+    <p class="processing-status" role="status" data-import-pending><strong>Upload received.</strong>
+       We're verifying the signature on your PDF. This usually takes a few seconds — this page will
+       update on its own.</p>
+
+  <% else %>
+    <h1>Import your existing NDA</h1>
+    <p class="lede">If you signed the Hack Club NDA through our old signing system, upload the
+       completed PDF here and we'll add it to your record. You won't need to sign again.</p>
+    <% if @import&.rejected? %>
+      <p class="flash flash-alert"><%= LegacyNdaImportsController::REJECTION %></p>
+    <% end %>
+    <%= form_with url: legacy_nda_import_path, multipart: true, class: "wizard-form" do |form| %>
+      <div class="form-card">
+        <label class="upload-zone">
+          <span class="upload-icon">↑</span>
+          <strong>Drop your signed PDF here or <u>browse</u></strong>
+          <small id="legacy-document-help">PDF only · maximum 25 MB</small>
+          <%= file_field_tag :document, accept: ".pdf,application/pdf", required: true, aria: { describedby: "legacy-document-help" } %>
+        </label>
+        <p class="validation-note"><span>✦</span>We check the digital signature on the PDF against
+           Hack Club's own signing key, and confirm the agreement matches. Your upload is stored
+           encrypted as the record behind your signature, and is never shown publicly.</p>
+        <%= form.submit "Upload and verify", class: "button button-primary" %>
+      </div>
+    <% end %>
+    <p class="recorder-note">Never signed before? <%= link_to "Sign the NDA now", nda_signature_path %>.</p>
+  <% end %>
+</section>

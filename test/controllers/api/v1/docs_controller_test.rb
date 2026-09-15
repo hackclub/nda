@@ -23,7 +23,9 @@ class Api::V1::DocsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "getNdaStatus", operation["operationId"]
     assert_equal %w[200 400 429], operation["responses"].keys
     assert_equal [], operation["security"]
-    assert_equal %w[nda_version signed_at slack_id status],
+    assert_equal %w[nda_version signature_type signed_at slack_id status],
       document.dig("components", "schemas", "NdaStatus", "properties").keys.sort
+    assert_equal %w[legacy native],
+      document.dig("components", "schemas", "NdaStatus", "properties", "signature_type", "enum").sort
   end
 end

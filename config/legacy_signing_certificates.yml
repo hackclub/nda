@@ -1,0 +1,4 @@
+# pin for legacy Documenso NDAs, self signed lol
+- name: hackclub.com self-signed, issued 2025-04-01
+  spki_sha256: 6a3845598e6f66f8c2919ce7473a0665aa56495a468e38eb42a1c97ce68feacf
+  certificate_sha256: de57d57604154facab5a74c7b1c4e19deea5c11ff3970558166e0e02c13f1500

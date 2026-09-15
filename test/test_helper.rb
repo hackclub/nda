@@ -25,5 +25,21 @@ module ActiveSupport
         signature.save!
       end
     end
+
+    def create_legacy_signature(user, signed_at: 1.year.ago, **overrides)
+      digest = overrides[:legacy_document_sha256] || SecureRandom.hex(32)
+      user.nda_signatures.create!({
+        signature_type: "legacy",
+        document_version: NdaDocument::LEGACY_VERSION,
+        document_sha256: digest,
+        legacy_document_sha256: digest,
+        legacy_envelope_id: "envelope_#{SecureRandom.hex(8)}",
+        legacy_signing_certificate_fingerprint: SecureRandom.hex(32),
+        legacy_signer_name: "Ada Lovelace",
+        legacy_signer_email: "ada@example.com",
+        signed_name: "Ada Lovelace",
+        signed_at: signed_at
+      }.merge(overrides))
+    end
   end
 end

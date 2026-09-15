@@ -200,3 +200,5 @@ if (statusForm) statusForm.addEventListener("submit", async event => {
     result.innerHTML = data.status === "signed" ? `<strong>✓ NDA signed</strong><span>Version ${data.nda_version} · ${new Date(data.signed_at).toLocaleDateString()}</span>` : `<strong>Not signed</strong><span>No active NDA was found for this Slack ID.</span>`
   } catch (error) { result.className = "lookup-result is-missing"; result.textContent = error.message }
 })
+
+if (document.querySelector("[data-import-pending]")) setTimeout(() => window.location.reload(), 3000)

@@ -46,7 +46,16 @@ class Api::V1::DocsController < ApplicationController
                         summary: "Signed",
                         value: {
                           slack_id: "U0123ABCDEF", status: "signed",
-                          nda_version: NdaDocument::VERSION, signed_at: "2025-04-02T15:04:05Z"
+                          nda_version: NdaDocument::VERSION, signed_at: "2025-04-02T15:04:05Z",
+                          signature_type: "native"
+                        }
+                      },
+                      imported: {
+                        summary: "Signed, imported from the previous signing system",
+                        value: {
+                          slack_id: "U0123ABCDEF", status: "signed",
+                          nda_version: NdaDocument::LEGACY_VERSION, signed_at: "2025-12-04T23:22:32Z",
+                          signature_type: "legacy"
                         }
                       },
                       not_signed: {
@@ -101,6 +110,10 @@ class Api::V1::DocsController < ApplicationController
               signed_at: {
                 type: "string", format: "date-time",
                 description: "Present only when status is signed."
+              },
+              signature_type: {
+                type: "string", enum: %w[native legacy],
+                description: "How the agreement was signed. Present only when status is signed. native: completed via the new signing flow. legacy: a completed & cryptographically valid PDF imported from the previous system. Both are legally binding agreements, but it is recommended that users complete the new signing flow. If you check NDAs for a user that has signed via the legacy system, you may want to prompt them to sign again via the new flow, but do not block them from using your service if they have a valid legacy signature."
               }
             }
           },

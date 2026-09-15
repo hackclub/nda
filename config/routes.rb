@@ -6,6 +6,13 @@ Rails.application.routes.draw do
   delete "/logout", to: "sessions#destroy", as: :logout
 
   resource :nda_signature, only: %i[show create]
+  resource :legacy_nda_import, only: %i[show create] do
+    post :challenge
+  end
+
+  namespace :admin do
+    resources :legacy_nda_imports, only: %i[index update]
+  end
 
   get "/openapi.json", to: "api/v1/docs#openapi", as: :openapi
 

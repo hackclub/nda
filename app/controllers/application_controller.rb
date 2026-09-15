@@ -10,6 +10,10 @@ class ApplicationController < ActionController::Base
   end
 
   def require_login
-    redirect_to root_path, alert: "Please sign in with Hack Club first." unless current_user
+    redirect_to root_path, alert: "Please sign in first!" unless current_user
+  end
+
+  def require_admin
+    redirect_to root_path, alert: "Please sign in first!" unless current_user&.admin?
   end
 end

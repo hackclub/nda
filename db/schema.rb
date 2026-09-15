@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_13_181021) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_15_153649) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -42,6 +42,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_181021) do
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
+  create_table "legacy_nda_imports", force: :cascade do |t|
+    t.integer "challenge_attempts", default: 0, null: false
+    t.string "challenge_digest"
+    t.string "challenge_email"
+    t.datetime "challenge_expires_at"
+    t.datetime "created_at", null: false
+    t.datetime "document_purged_at"
+    t.string "document_sha256"
+    t.string "envelope_id"
+    t.string "ip_address"
+    t.bigint "nda_signature_id"
+    t.jsonb "reasons", default: [], null: false
+    t.string "state", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.jsonb "verification"
+    t.index ["created_at"], name: "index_legacy_nda_imports_on_created_at"
+    t.index ["document_sha256"], name: "index_legacy_nda_imports_on_document_sha256"
+    t.index ["nda_signature_id"], name: "index_legacy_nda_imports_on_nda_signature_id"
+    t.index ["state"], name: "index_legacy_nda_imports_on_state"
+    t.index ["user_id"], name: "index_legacy_nda_imports_on_user_id"
+  end
+
   create_table "nda_signatures", force: :cascade do |t|
     t.string "cosigner_email"
     t.string "cosigner_name"
@@ -50,6 +73,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_181021) do
     t.string "document_version", null: false
     t.datetime "identity_video_purged_at"
     t.string "ip_address"
+    t.boolean "legacy_cosigner_present"
+    t.datetime "legacy_cosigner_signed_at"
+    t.string "legacy_document_sha256"
+    t.string "legacy_envelope_id"
+    t.string "legacy_signer_email"
+    t.string "legacy_signer_name"
+    t.string "legacy_signing_certificate_fingerprint"
+    t.jsonb "legacy_verification"
+    t.text "review_note"
+    t.datetime "reviewed_at"
+    t.bigint "reviewed_by_id"
+    t.string "signature_type", default: "native", null: false
     t.datetime "signed_at", null: false
     t.string "signed_name", null: false
     t.text "transcript"
@@ -57,8 +92,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_181021) do
     t.text "user_agent"
     t.bigint "user_id", null: false
     t.decimal "validation_score", precision: 5, scale: 4
+    t.string "verification_state", default: "approved", null: false
+    t.index ["legacy_document_sha256"], name: "index_nda_signatures_on_legacy_document_sha256", unique: true, where: "(legacy_document_sha256 IS NOT NULL)"
+    t.index ["legacy_envelope_id"], name: "index_nda_signatures_on_legacy_envelope_id", unique: true, where: "(legacy_envelope_id IS NOT NULL)"
+    t.index ["reviewed_by_id"], name: "index_nda_signatures_on_reviewed_by_id"
+    t.index ["signature_type"], name: "index_nda_signatures_on_signature_type"
     t.index ["user_id", "document_version"], name: "index_nda_signatures_on_user_id_and_document_version", unique: true
     t.index ["user_id"], name: "index_nda_signatures_on_user_id"
+    t.index ["verification_state"], name: "index_nda_signatures_on_verification_state"
   end
 
   create_table "solid_queue_batch_executions", force: :cascade do |t|
@@ -214,6 +255,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_181021) do
   create_table "users", force: :cascade do |t|
     t.string "address_line_1"
     t.string "address_line_2"
+    t.boolean "admin", default: false, null: false
     t.date "birthdate"
     t.string "city"
     t.string "country"
@@ -234,7 +276,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_181021) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "legacy_nda_imports", "nda_signatures"
+  add_foreign_key "legacy_nda_imports", "users"
   add_foreign_key "nda_signatures", "users"
+  add_foreign_key "nda_signatures", "users", column: "reviewed_by_id"
   add_foreign_key "solid_queue_batch_executions", "solid_queue_batches", column: "batch_id", on_delete: :cascade
   add_foreign_key "solid_queue_batch_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

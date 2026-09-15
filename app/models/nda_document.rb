@@ -2,6 +2,7 @@ require "digest"
 
 class NdaDocument
   VERSION = "2025-04-01-corrected"
+  LEGACY_VERSION = "2025-04-01"
   TITLE = "MUTUAL NON-DISCLOSURE AGREEMENT"
   FOOTER = "Last revised 2025-04-01"
 
