@@ -24,6 +24,8 @@ class NdaSignaturesControllerFormTest < ActionController::TestCase
 end
 
 class NdaSignaturesControllerRetryTest < ActionController::TestCase
+  include ActiveJob::TestHelper
+
   tests NdaSignaturesController
 
   setup do
@@ -34,13 +36,17 @@ class NdaSignaturesControllerRetryTest < ActionController::TestCase
     singleton = PledgeValidator.singleton_class
     original = singleton.instance_method(:verify!)
     singleton.define_method(:verify!) { |_video, user:| raise PledgeValidator::Rejected, "No speech detected." }
+    previous_token = ENV["SLACK_BOT_TOKEN"]
+    ENV["SLACK_BOT_TOKEN"] = "test-token"
 
-    post :create, params: {
-      accepted: "1",
-      identity_video: fixture_file_upload("pledge.webm", "video/webm"),
-      signed_name: "Ada Lovelace",
-      user: SIGNING_DETAILS
-    }
+    assert_enqueued_with(job: NotifyNdaFailedJob, args: [ users(:one).id ]) do
+      post :create, params: {
+        accepted: "1",
+        identity_video: fixture_file_upload("pledge.webm", "video/webm"),
+        signed_name: "Ada Lovelace",
+        user: SIGNING_DETAILS
+      }
+    end
 
     assert_response :unprocessable_entity
     assert_select "[data-wizard][data-initial-step='2']"
@@ -49,6 +55,7 @@ class NdaSignaturesControllerRetryTest < ActionController::TestCase
     assert_select "select[name='user[country]'] option[selected][value='United States']"
     assert_select ".flash-alert", text: "No speech detected."
   ensure
+    ENV["SLACK_BOT_TOKEN"] = previous_token
     singleton&.define_method(:verify!, original) if original
   end
 end

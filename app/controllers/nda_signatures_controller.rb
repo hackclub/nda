@@ -38,15 +38,22 @@ class NdaSignaturesController < ApplicationController
     NotifyNdaSignedJob.perform_later(signature.id) if SlackClient.configured?
     redirect_to nda_signature_path, notice: "NDA signed on #{signature.signed_at.to_date.to_fs(:long)}."
   rescue PledgeValidator::Rejected => error
+    enqueue_failure_notification
     render_video_retry(error.message)
   rescue PledgeValidator::Error => error
     Rails.logger.warn("xAI transcription failed: #{error.message}")
+    enqueue_failure_notification
     render_video_retry("We couldn't validate the video right now. Please upload it again.")
   rescue ActiveRecord::RecordInvalid => error
+    enqueue_failure_notification
     redirect_to nda_signature_path, alert: error.record.errors.full_messages.to_sentence
   end
 
   private
+
+  def enqueue_failure_notification
+    NotifyNdaFailedJob.perform_later(current_user.id) if SlackClient.configured?
+  end
 
   def render_video_retry(message)
     @retry_video = true
