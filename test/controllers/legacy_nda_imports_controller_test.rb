@@ -50,7 +50,7 @@ class LegacyNdaImportsControllerTest < ActionController::TestCase
     post :create, params: { document: upload("%PDF-" + "x" * LegacyNdaImport::MAX_DOCUMENT_BYTES) }
 
     assert_empty users(:one).legacy_nda_imports
-    assert_match(/larger than 25 MB/i, flash[:alert])
+    assert_match(/bigger than 25 MB/i, flash[:alert])
   end
 
   test "limits how many times a member can try in a day" do
@@ -59,7 +59,7 @@ class LegacyNdaImportsControllerTest < ActionController::TestCase
     post :create, params: { document: upload }
 
     assert_equal LegacyNdaImportsController::MAX_ATTEMPTS_PER_DAY, users(:one).legacy_nda_imports.count
-    assert_match(/try again tomorrow/i, flash[:alert])
+    assert_match(/sign a new NDA instead/i, flash[:alert])
   end
 
   test "does not ask a member who is already covered to import anything" do
