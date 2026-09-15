@@ -1,0 +1,57 @@
+<% content_for :title, "Legacy NDA review" %>
+<section class="shell review-queue">
+  <h1>Legacy NDA review</h1>
+  <p class="lede">peoples ndas who didnt fit quite right</p>
+
+  <% if @signatures.empty? %>
+    <p class="review-empty">all clear!</p>
+  <% end %>
+
+  <% @signatures.each do |signature| %>
+    <article class="form-card review-item">
+      <h2><%= signature.user.display_name %> <small><%= signature.user.slack_id %></small></h2>
+      <dl>
+        <div><dt>On the document</dt><dd><%= signature.legacy_signer_name %> &lt;<%= signature.legacy_signer_email %>&gt;</dd></div>
+        <div><dt>Account email</dt><dd><%= signature.user.email %></dd></div>
+        <div><dt>Legal name on file</dt><dd><%= signature.user.legal_name.presence || "—" %></dd></div>
+        <div><dt>Signed at</dt><dd><time datetime="<%= signature.signed_at.iso8601 %>" data-local-time><%= signature.signed_at.to_fs(:long) %></time></dd></div>
+        <div><dt>Envelope</dt><dd><code><%= signature.legacy_envelope_id %></code></dd></div>
+        <div><dt>Co-signer</dt><dd><%= signature.legacy_cosigner_present ? "yes, signed #{signature.legacy_cosigner_signed_at}" : "no" %></dd></div>
+      </dl>
+
+      <h3>Why it's here</h3>
+      <ul class="review-reasons">
+        <% Array(signature.legacy_verification&.dig("reasons")).each do |reason| %>
+          <li><%= reason.humanize %></li>
+        <% end %>
+      </ul>
+
+      <details>
+        <summary>Full check result</summary>
+        <pre class="review-json"><%= JSON.pretty_generate(signature.legacy_verification || {}) %></pre>
+      </details>
+
+      <p class="review-note">Upload: <% if signature.legacy_nda_import&.document&.attached? %>
+        <code>bin/rails "legacy_documents:download[<%= signature.legacy_nda_import.id %>]"</code>
+      <% else %>purged<% end %></p>
+
+      <%= form_with url: admin_legacy_nda_import_path(signature), method: :patch, class: "review-actions" do %>
+        <%= text_field_tag :note, nil, placeholder: "Note for the audit record" %>
+        <%= submit_tag "Approve", name: "decision", value: "approve", class: "button button-primary" %>
+        <%= submit_tag "Revoke", name: "decision", value: "revoke", class: "button button-secondary" %>
+      <% end %>
+    </article>
+  <% end %>
+
+  <% if @recent.any? %>
+    <h2>Recently reviewed</h2>
+    <ul class="review-log">
+      <% @recent.each do |signature| %>
+        <li><%= signature.user.slack_id %> — <strong><%= signature.verification_state.humanize %></strong>
+            by <%= signature.reviewed_by&.display_name || "—" %>
+            on <time datetime="<%= signature.reviewed_at.iso8601 %>" data-local-time><%= signature.reviewed_at.to_fs(:long) %></time>
+            <%= "· #{signature.review_note}" if signature.review_note.present? %></li>
+      <% end %>
+    </ul>
+  <% end %>
+</section>

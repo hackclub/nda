@@ -20,7 +20,8 @@ class SessionsController < ApplicationController
       slack_id: identity.fetch("slack_id"),
       first_name: identity["first_name"],
       last_name: identity["last_name"],
-      email: identity["primary_email"]
+      email: identity["primary_email"],
+      admin: User.admin_slack_ids.include?(identity.fetch("slack_id").to_s.upcase)
     )
     reset_session
     session[:user_id] = user.id

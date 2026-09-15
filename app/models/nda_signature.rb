@@ -1,22 +1,32 @@
 class NdaSignature < ApplicationRecord
-  IDENTITY_VIDEO_RETENTION = 7.days
   VIDEO_TYPES = %w[video/mp4 video/webm].freeze
   MAX_VIDEO_BYTES = 25.megabytes
 
   belongs_to :user
+  belongs_to :reviewed_by, class_name: "User", optional: true
+  has_one :legacy_nda_import, dependent: :nullify
   has_one_attached :identity_video
 
-  scope :identity_video_expired, -> {
-    where(identity_video_purged_at: nil).where(signed_at: ...IDENTITY_VIDEO_RETENTION.ago)
-  }
+  enum :signature_type, { native: "native", legacy: "legacy" }, default: "native", validate: true
+  enum :verification_state, { approved: "approved", needs_review: "needs_review", rejected: "rejected" },
+    default: "approved", validate: true
 
-  validates :document_version, :document_sha256, :signed_name, :signed_at, :transcript, presence: true
+  validates :document_version, :document_sha256, :signed_name, :signed_at, presence: true
   validates :document_version, uniqueness: { scope: :user_id }
   validates :document_sha256, format: { with: /\A[0-9a-f]{64}\z/ }
   validates :signed_name, length: { maximum: 200 }
-  validate :acceptable_identity_video
-  validate :cosigner_present_for_minor
-  validate :signed_name_matches_recipient
+
+  with_options if: :native? do
+    validates :transcript, presence: true
+    validate :acceptable_identity_video
+    validate :cosigner_present_for_minor
+    validate :signed_name_matches_recipient
+  end
+
+  with_options if: -> { legacy? && !rejected? } do
+    validates :legacy_signing_certificate_fingerprint, presence: true
+    validates :legacy_document_sha256, presence: true, format: { with: /\A[0-9a-f]{64}\z/ }
+  end
 
   def purge_identity_video!
     identity_video.purge

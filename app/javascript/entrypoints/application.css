@@ -276,3 +276,22 @@ blockquote p:last-child { margin-bottom: 0; }
   .contract-clause, .contract-parties, .signature-line, .print-certificate { break-inside: avoid; page-break-inside: avoid; }
   .print-certificate { display: block; }
 }
+
+.secondary-path { margin: 18px 0 0; text-align: center; font-size: 13px; color: var(--muted); }
+.secondary-path a { color: inherit; text-decoration: underline; }
+.legacy-import dl { margin-top: 18px; }
+
+.review-queue h2 { font-size: 18px; margin: 28px 0 12px; }
+.review-queue h2 small { font-weight: 400; color: var(--muted); font-size: 13px; }
+.review-queue h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 18px 0 6px; }
+.review-item { margin-bottom: 20px; }
+.review-item dl { display: grid; gap: 6px 18px; grid-template-columns: max-content 1fr; margin: 0; }
+.review-item dl div { display: contents; }
+.review-item dt { color: var(--muted); font-size: 13px; }
+.review-item dd { margin: 0; font-size: 13px; word-break: break-word; }
+.review-reasons { margin: 0; padding-left: 18px; font-size: 13px; }
+.review-json { overflow-x: auto; background: #f6f6f8; padding: 12px; border-radius: 8px; font-size: 12px; }
+.review-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 14px; }
+.review-actions input[type=text] { flex: 1 1 240px; }
+.review-note, .review-empty { color: var(--muted); font-size: 13px; }
+.review-log { font-size: 13px; color: var(--muted); padding-left: 18px; }

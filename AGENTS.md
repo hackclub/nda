@@ -50,17 +50,35 @@ Tests need Postgres. They mock xAI (`XaiTranscription.call`) and do not call liv
 ## Layout
 
 | Path | Role |
-|---|---|
+| --- | --- |
 | `app/controllers/sessions_controller.rb` | OAuth start/callback/logout |
 | `app/controllers/nda_signatures_controller.rb` | Signer form + create |
 | `app/controllers/api/v1/nda_statuses_controller.rb` | Public status JSON |
+| `app/controllers/legacy_nda_imports_controller.rb` | Legacy NDA upload, pending state, email challenge |
+| `app/controllers/admin/legacy_nda_imports_controller.rb` | Review queue: approve or revoke an import |
+| `app/services/legacy_nda/pades_signature.rb` | PAdES/CMS verification against a pinned certificate |
+| `app/services/legacy_nda/certificate_allowlist.rb` | Pinned signing certificates (YAML + env) |
+| `app/services/legacy_nda/document_text.rb` | pdf-reader extraction, glyph normalisation, page split |
+| `app/services/legacy_nda/certificate_page.rb` | Documenso signing certificate page parser |
+| `app/services/legacy_nda/signature_block.rb` | The AGREED block at the foot of the agreement |
+| `app/services/legacy_nda/content_match.rb` | Is this the Hack Club NDA (containment + headings) |
+| `app/services/legacy_nda/redactor.rb` | Strips personal data before scoring or any AI call |
+| `app/services/legacy_nda/verifier.rb` | Layers 1-3 into approved / needs_review / rejected |
+| `app/services/legacy_nda/claim.rb` | Identity binding; the only place an import becomes a signature |
+| `app/services/legacy_nda/email_challenge.rb` | HMAC-stored one-time code to the document's address |
+| `app/services/loops_client.rb` | Transactional email via Loops (no ActionMailer in this app) |
+| `app/services/sse_customer_blob.rb` | Reads SSE-C blobs back; Active Storage cannot |
+| `app/models/legacy_nda_import.rb` | Upload workflow, audit row, retention |
+| `app/jobs/verify_legacy_nda_import_job.rb` | Runs verification off the request |
+| `lib/tasks/legacy_documents.rake` | Decrypt one upload for review |
+| `config/legacy_signing_certificates.yml` | Pinned certificate fingerprints |
 | `app/services/hack_club_auth.rb` | auth.hackclub.com OAuth |
 | `app/services/xai_transcription.rb` | `POST https://api.x.ai/v1/stt` multipart |
+| `app/services/zero_data_retention.rb` | Shared ZDR header check for both xAI calls |
 | `app/services/pledge_validator.rb` | Token overlap + required concepts |
 | `app/models/user.rb` | Identity + signing details |
 | `app/models/nda_signature.rb` | Signed record + video attachment + retention |
-| `app/jobs/purge_identity_videos_job.rb` | Nightly purge of expired identity videos |
-| `lib/tasks/identity_videos.rake` | Manual purge + decrypt-for-review |
+| `lib/tasks/identity_videos.rake` | Decrypt one video for review |
 | `app/models/country.rb` | ISO 3166-1 list behind the country picker (`countries` gem) |
 | `lib/tasks/flags.rake` | Vendors Twemoji flag SVGs into `app/javascript/flags` |
 | `app/models/nda_document.rb` | Canonical agreement text + SHA-256 |
@@ -75,6 +93,8 @@ Routes of interest:
 
 - `GET /auth/hack_club` / `GET /auth/hack_club/callback` / `DELETE /logout`
 - `GET/POST /nda_signature`
+- `GET/POST /legacy_nda_import`, `POST /legacy_nda_import/challenge`
+- `GET /admin/legacy_nda_imports`, `PATCH /admin/legacy_nda_imports/:id`
 - `GET /api/v1/nda_status/:slack_id`
 
 ## Conventions
@@ -101,10 +121,16 @@ Routes of interest:
 The public API is the only unauthenticated data surface. `GET /api/v1/nda_status/:slack_id` may return only:
 
 ```json
-{ "slack_id": "U0123ABCDEF", "status": "signed"|"not_signed", "nda_version": "...", "signed_at": "..." }
+{ "slack_id": "U0123ABCDEF", "status": "signed"|"not_signed", "nda_version": "...", "signed_at": "...", "signature_type": "native"|"legacy" }
 ```
 
-Never add names, email, address, birthdate, video, transcript, IP, user agent, or co-signer fields to this endpoint. Unknown IDs are `not_signed`; malformed Slack IDs (`User::SLACK_ID_FORMAT`) are HTTP 400.
+`signature_type` is a deliberate addition, not drift: consumers have to be able to tell a legacy
+import from a signature this app produced, because the two carry different assurance about *who*
+signed. It is not PII. Nothing else may be added. Never add names, email, address, birthdate,
+video, transcript, IP, user agent, envelope ID, certificate fingerprint, review state, or co-signer
+fields to this endpoint. Unknown IDs are `not_signed`; malformed Slack IDs (`User::SLACK_ID_FORMAT`) are HTTP 400.
+`signed_at` and `signature_type` appear only when `status` is `signed`; `nda_version` is always present.
+Only `approved` imports count as signed — `needs_review` reads as `not_signed`.
 
 Other rules:
 
@@ -113,7 +139,11 @@ Other rules:
 - `.env` is gitignored; only `.env.example` is tracked (placeholders only).
 - Identity videos, transcripts, addresses, birthdates, IPs, and co-signer data are sensitive. Do not log them, dump them in errors, or include them in fixtures beyond what tests need.
 - Identity videos are uploaded to R2 with SSE-C (`R2_SSE_CUSTOMER_KEY`, exactly 32 characters). Keep it that way: without SSE-C, anyone with Cloudflare dashboard access can watch them. Active Storage cannot read SSE-C objects back, which is why `config.active_storage.analyzers` is empty and why review goes through `identity_videos:download`.
-- Identity videos are deleted 7 days after signing by `PurgeIdentityVideosJob`, scheduled in `config/recurring.yml` (`NdaSignature::IDENTITY_VIDEO_RETENTION`). Keep the purge path working and do not widen the window without a product decision. The R2 bucket stays private; videos are never linked publicly.
+- Identity videos are kept for the life of the signature: there is no retention window and no scheduled purge. `purge_identity_video!` exists for a one-off deletion by hand and is deliberately not on a schedule. The R2 bucket stays private; videos are never linked publicly.
+- Uploaded legacy NDAs are at least as sensitive as an identity video: they carry the signer's name, personal email, signature image, IP address, device string and full co-signer details. They go to R2 with SSE-C like videos and are kept for the life of the import, with `purge_document!` there for a one-off deletion by hand. Read them back only through `SseCustomerBlob` / `legacy_documents:download`.
+- Legacy import rejection copy must stay generic (`LegacyNdaImportsController::REJECTION`). Reason codes go to the audit record, never to the page: naming the failed check turns the importer into a forgery oracle.
+- Verifying a legacy PDF proves the document is authentic Hack Club output. It proves nothing about who uploaded it, and a leaked PDF verifies perfectly. Never settle a claim without either an account-email match or a passed email challenge, and never settle one at all for a document carrying no address.
+- Legacy signing certificates are trusted by pinning only (`config/legacy_signing_certificates.yml`). Do not add chain validation, do not enforce the certificate validity window — real documents were signed after it expired — and do not drop a pin that ever signed a real NDA.
 - xAI validates spoken content only, not face, raised hand, liveness, or speaker identity. Do not claim otherwise in UI copy.
 - OAuth `state` must keep using `secure_compare`. Session is reset after login.
 
@@ -124,7 +154,12 @@ Other rules:
 - Pledge acceptance: token Jaccard ≥ 0.65 **and** each required concept ≥ 0.5 overlap. Keep those thresholds unless the product owner changes them.
 - Video: MP4 or WebM, ≤ 25 MB.
 - Minors (`user.age < 18`) require `cosigner_name` and `cosigner_email`.
-- `signed_name` must case-insensitively match `legal_first_name` + `legal_last_name`.
+- `signed_name` must case-insensitively match `legal_first_name` + `legal_last_name`. Native signatures only: the video, transcript, co-signer and legal-name checks are all conditional on `signature_type == "native"`.
+- Legacy fixtures are generated at test time by `test/support/legacy_pdf_factory.rb`, which builds a real PAdES-signed PDF with a throwaway key. Never commit a real person's NDA. Pin the test certificate with `LegacyNda::CertificateAllowlist.default = LegacyPdfFactory.allowlist` and `reset!` afterwards.
+- Stub `LoopsClient.send_email` the way `test/jobs/verify_legacy_nda_import_job_test.rb` does. No live network anywhere.
+- `LoopsClient` is a stub: the transport is real, but the challenge template still has to be built in Loops and named by `LOOPS_IMPORT_CHALLENGE_TRANSACTIONAL_ID`. The body lives in that template, not in this repo.
+- Content match thresholds are provisional, measured on three real samples that all scored 1.0 containment with 18/18 headings. Gate on containment, not Jaccard: a genuine document carrying an appendix keeps containment 1.0 while its Jaccard falls.
+- Not every legacy document has a signing certificate page, and not every one is `ETSI.CAdES.detached` (`adbe.pkcs7.detached` is also real). A document with no certificate page is authentic but names no address, so it can only ever reach `needs_review`.
 
 ## Do not
 

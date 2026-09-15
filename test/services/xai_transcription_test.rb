@@ -39,7 +39,7 @@ class XaiTranscriptionTest < ActiveSupport::TestCase
     response = Net::HTTPResponse.send(:response_class, code).new("1.1", code, "")
     response.instance_variable_set(:@body, body)
     response.instance_variable_set(:@read, true)
-    response[XaiTranscription::ZDR_HEADER] = zdr if zdr
+    response[ZeroDataRetention::HEADER] = zdr if zdr
 
     singleton = Net::HTTP.singleton_class
     original = singleton.instance_method(:start)
