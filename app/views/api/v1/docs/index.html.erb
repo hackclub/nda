@@ -1,22 +1,45 @@
 <% content_for :title, "Hack Club NDA API Docs" %>
 <% content_for :body_class, "docs-page" %>
 
-<section class="docs-shell">
-  <article class="docs-content">
-    <section class="docs-section">
-      <div class="endpoint-heading">
-        <span class="http-method">GET</span>
-        <code>/api/v1/nda_status/:slack_id</code>
-      </div>
-      <p>Replace <code>:slack_id</code> with a Slack member ID. Note that this endpoint is public and does not require authentication. Do not file security reports against this endpoint claiming it leaks private information.</p>
+<article class="docs-shell">
+  <header class="docs-header">
+    <div>
+      <h1>NDA status</h1>
+      <p>Check whether a Hack Club member has signed the current NDA. No authentication is required.</p>
+    </div>
+    <%= link_to "OpenAPI 3.1 specification", openapi_path, class: "button button-secondary docs-spec-link" %>
+  </header>
 
+  <section class="docs-endpoint" aria-labelledby="endpoint-title">
+    <div class="endpoint-heading" id="endpoint-title">
+      <span class="http-method">GET</span>
+      <code>/api/v1/nda_status/:slack_id</code>
+    </div>
+    <p>Replace <code>:slack_id</code> with a Slack member ID beginning with <code>U</code> or <code>W</code>. The ID is normalized to uppercase before lookup.</p>
+  </section>
+
+  <div class="docs-grid">
+    <section class="docs-section docs-request">
       <h2>Request</h2>
+      <p>Send the Slack member ID as the final path segment.</p>
       <pre><code>curl <%= api_v1_nda_status_url(slack_id: "U0123ABCDEF") %></code></pre>
+
+      <dl class="docs-parameters">
+        <div>
+          <dt><code>slack_id</code></dt>
+          <dd>Required path parameter · 9–21 characters</dd>
+        </div>
+      </dl>
     </section>
 
-    <section class="docs-section">
-      <h2>Successful response</h2>
-      <p>A known member with a signature for the current NDA receives <code>signed</code> and a signing timestamp.</p>
+    <section class="docs-section docs-responses">
+      <h2>Responses</h2>
+
+      <div class="response-heading">
+        <h3>Signed</h3>
+        <code>200 OK</code>
+      </div>
+      <p>A member with a signature for the current NDA receives <code>signed</code> and a signing timestamp.</p>
       <pre><code>HTTP/1.1 200 OK
 Content-Type: application/json
 
@@ -27,24 +50,36 @@ Content-Type: application/json
   "signed_at": "2025-04-02T15:04:05Z"
 }</code></pre>
 
-      <p>An unknown member, or a member without a signature for the current version, receives <code>not_signed</code>. In that case, <code>signed_at</code> is omitted.</p>
+      <div class="response-heading">
+        <h3>Not signed</h3>
+        <code>200 OK</code>
+      </div>
+      <p>An unknown member, or a member without a signature for the current NDA, receives <code>not_signed</code>. In that case, <code>signed_at</code> is omitted.</p>
       <pre><code>{
   "slack_id": "U0123ABCDEF",
   "status": "not_signed",
   "nda_version": "<%= NdaDocument::VERSION %>"
 }</code></pre>
     </section>
+  </div>
 
+  <div class="docs-grid docs-grid-secondary">
     <section class="docs-section">
-      <h2>Invalid Slack ID</h2>
-      <p>Unknown or malformed IDs receive a <code>400 Bad Request</code>.</p>
+      <div class="response-heading">
+        <h2>Invalid Slack ID</h2>
+        <code>400 Bad Request</code>
+      </div>
+      <p>A malformed Slack ID receives a <code>400 Bad Request</code>.</p>
       <pre><code>{
   "error": "invalid_slack_id"
 }</code></pre>
     </section>
 
     <section class="docs-section">
-      <h2>Rate limit</h2>
+      <div class="response-heading">
+        <h2>Rate limit</h2>
+        <code>429 Too Many Requests</code>
+      </div>
       <p>Each client IP may make up to 10 requests per second across the site. Additional requests receive <code>429 Too Many Requests</code> with a <code>Retry-After</code> header.</p>
       <pre><code>HTTP/1.1 429 Too Many Requests
 Content-Type: text/plain
@@ -52,5 +87,5 @@ Retry-After: 1
 
 Retry later</code></pre>
     </section>
-  </article>
-</section>
+  </div>
+</article>

@@ -5,7 +5,7 @@ class Api::V1::DocsControllerTest < ActionDispatch::IntegrationTest
     get api_v1_docs_url
 
     assert_response :success
-    assert_select "title", "API Documentation · Hack Club NDA"
+    assert_select "title", text: "Hack Club NDA API Docs"
     assert_select "code", text: "/api/v1/nda_status/:slack_id"
     assert_select "a[href='#{openapi_path}']", text: "OpenAPI 3.1 specification"
     assert_includes response.body, NdaDocument::VERSION
