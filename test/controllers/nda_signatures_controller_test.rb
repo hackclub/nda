@@ -52,3 +52,37 @@ class NdaSignaturesControllerRetryTest < ActionController::TestCase
     singleton&.define_method(:verify!, original) if original
   end
 end
+
+class NdaSignaturesControllerSuccessTest < ActionController::TestCase
+  include ActiveJob::TestHelper
+
+  tests NdaSignaturesController
+
+  setup do
+    session[:user_id] = users(:one).id
+  end
+
+  test "queues a Slack notification after a valid signature when Slack is configured" do
+    validator = PledgeValidator.singleton_class
+    original = validator.instance_method(:verify!)
+    validator.define_method(:verify!) do |*, **|
+      PledgeValidator::Result.new(transcript: "I pledge.", score: 1.0)
+    end
+    previous_token = ENV["SLACK_BOT_TOKEN"]
+    ENV["SLACK_BOT_TOKEN"] = "test-token"
+
+    assert_enqueued_with(job: NotifyNdaSignedJob) do
+      post :create, params: {
+        accepted: "1",
+        identity_video: fixture_file_upload("pledge.webm", "video/webm"),
+        signed_name: "Ada Lovelace",
+        user: SIGNING_DETAILS
+      }
+    end
+
+    assert_redirected_to nda_signature_path
+  ensure
+    ENV["SLACK_BOT_TOKEN"] = previous_token
+    validator&.define_method(:verify!, original) if original
+  end
+end

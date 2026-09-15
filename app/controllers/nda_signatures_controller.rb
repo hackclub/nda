@@ -35,6 +35,7 @@ class NdaSignaturesController < ApplicationController
       current_user.save!
       signature.save!
     end
+    NotifyNdaSignedJob.perform_later(signature.id) if SlackClient.configured?
     redirect_to nda_signature_path, notice: "NDA signed on #{signature.signed_at.to_date.to_fs(:long)}."
   rescue PledgeValidator::Rejected => error
     render_video_retry(error.message)
