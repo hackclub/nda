@@ -167,6 +167,8 @@ class VerifyLegacyNdaImportJobTest < ActiveJob::TestCase
 
   def with_stubbed_mail
     sent = @sent
+    singleton = nil
+    original = nil
     singleton = LoopsClient.singleton_class
     original = singleton.instance_method(:send_email)
     singleton.define_method(:send_email) { |to:, transactional_id:, data_variables: {}|
@@ -174,6 +176,6 @@ class VerifyLegacyNdaImportJobTest < ActiveJob::TestCase
     }
     yield
   ensure
-    singleton.define_method(:send_email, original)
+    singleton.define_method(:send_email, original) if singleton && original
   end
 end
