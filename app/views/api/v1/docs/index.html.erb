@@ -1,21 +1,14 @@
-<% content_for :title, "API Documentation · Hack Club NDA" %>
+<% content_for :title, "Hack Club NDA API Docs" %>
 <% content_for :body_class, "docs-page" %>
 
 <section class="docs-shell">
-  <div class="docs-intro">
-    <span class="eyebrow">Public API · v1</span>
-    <h1>NDA status API</h1>
-    <p>Check whether a Hack Club member has signed the current NDA. This endpoint is public, requires no authentication, and returns no private identity information.</p>
-    <%= link_to "OpenAPI 3.1 specification", openapi_path, class: "docs-spec-link" %>
-  </div>
-
   <article class="docs-content">
     <section class="docs-section">
       <div class="endpoint-heading">
         <span class="http-method">GET</span>
         <code>/api/v1/nda_status/:slack_id</code>
       </div>
-      <p>Replace <code>:slack_id</code> with a Slack member ID beginning with <code>U</code> or <code>W</code>, followed by 8–20 letters or numbers. IDs are normalized to uppercase.</p>
+      <p>Replace <code>:slack_id</code> with a Slack member ID. Note that this endpoint is public and does not require authentication. Do not file security reports against this endpoint claiming it leaks private information.</p>
 
       <h2>Request</h2>
       <pre><code>curl <%= api_v1_nda_status_url(slack_id: "U0123ABCDEF") %></code></pre>
@@ -44,7 +37,7 @@ Content-Type: application/json
 
     <section class="docs-section">
       <h2>Invalid Slack ID</h2>
-      <p>Malformed IDs receive a <code>400 Bad Request</code>.</p>
+      <p>Unknown or malformed IDs receive a <code>400 Bad Request</code>.</p>
       <pre><code>{
   "error": "invalid_slack_id"
 }</code></pre>
@@ -58,16 +51,6 @@ Content-Type: text/plain
 Retry-After: 1
 
 Retry later</code></pre>
-    </section>
-
-    <section class="docs-section docs-notes">
-      <h2>Notes</h2>
-      <dl>
-        <div><dt>Authentication</dt><dd>None</dd></div>
-        <div><dt>Response type</dt><dd><code>application/json</code></dd></div>
-        <div><dt>Cache policy</dt><dd>Public, up to 30 seconds</dd></div>
-        <div><dt>Rate limit</dt><dd>10 requests per second, per IP</dd></div>
-      </dl>
     </section>
   </article>
 </section>
