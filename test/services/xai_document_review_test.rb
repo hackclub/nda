@@ -109,6 +109,10 @@ class LegacyNdaAiReviewTest < ActiveSupport::TestCase
   end
 
   def with_review(handler, enabled: false)
+    singleton = nil
+    original_call = nil
+    original_enabled = nil
+
     singleton = XaiDocumentReview.singleton_class
     original_call = singleton.instance_method(:call)
     original_enabled = singleton.instance_method(:enabled?)
@@ -116,7 +120,9 @@ class LegacyNdaAiReviewTest < ActiveSupport::TestCase
     singleton.define_method(:enabled?) { enabled }
     yield
   ensure
-    singleton.define_method(:call, original_call)
-    singleton.define_method(:enabled?, original_enabled)
+    if singleton && original_call && original_enabled
+      singleton.define_method(:call, original_call)
+      singleton.define_method(:enabled?, original_enabled)
+    end
   end
 end
