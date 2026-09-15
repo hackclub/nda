@@ -68,6 +68,21 @@ class Api::V1::DocsController < ApplicationController
                     example: { error: "invalid_slack_id" }
                   }
                 }
+              },
+              "429" => {
+                description: "The client IP exceeded 10 requests in one second.",
+                headers: {
+                  "Retry-After" => {
+                    description: "Seconds until the client can retry.",
+                    schema: { type: "integer", minimum: 1 }
+                  }
+                },
+                content: {
+                  "text/plain" => {
+                    schema: { type: "string" },
+                    example: "Retry later\n"
+                  }
+                }
               }
             }
           }

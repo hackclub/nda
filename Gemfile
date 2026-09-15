@@ -10,6 +10,7 @@ gem "countries", "~> 8.1"
 gem "aws-sdk-s3", require: false
 gem "tzinfo-data"
 gem "solid_queue"
+gem "rack-attack", "~> 6.8"
 gem "bootsnap", require: false
 gem "thruster", require: false
 

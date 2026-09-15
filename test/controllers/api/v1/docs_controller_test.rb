@@ -21,7 +21,7 @@ class Api::V1::DocsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "3.1.0", document["openapi"]
     operation = document.dig("paths", "/api/v1/nda_status/{slack_id}", "get")
     assert_equal "getNdaStatus", operation["operationId"]
-    assert_equal %w[200 400], operation["responses"].keys
+    assert_equal %w[200 400 429], operation["responses"].keys
     assert_equal [], operation["security"]
     assert_equal %w[nda_version signed_at slack_id status],
       document.dig("components", "schemas", "NdaStatus", "properties").keys.sort

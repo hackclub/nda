@@ -50,12 +50,23 @@ Content-Type: application/json
 }</code></pre>
     </section>
 
+    <section class="docs-section">
+      <h2>Rate limit</h2>
+      <p>Each client IP may make up to 10 requests per second across the site. Additional requests receive <code>429 Too Many Requests</code> with a <code>Retry-After</code> header.</p>
+      <pre><code>HTTP/1.1 429 Too Many Requests
+Content-Type: text/plain
+Retry-After: 1
+
+Retry later</code></pre>
+    </section>
+
     <section class="docs-section docs-notes">
       <h2>Notes</h2>
       <dl>
         <div><dt>Authentication</dt><dd>None</dd></div>
         <div><dt>Response type</dt><dd><code>application/json</code></dd></div>
         <div><dt>Cache policy</dt><dd>Public, up to 30 seconds</dd></div>
+        <div><dt>Rate limit</dt><dd>10 requests per second, per IP</dd></div>
       </dl>
     </section>
   </article>
