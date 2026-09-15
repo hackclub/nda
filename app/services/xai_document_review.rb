@@ -1,8 +1,6 @@
 require "net/http"
 
 class XaiDocumentReview
-  extend ZeroDataRetention
-
   ENDPOINT = URI("https://api.x.ai/v1/chat/completions")
   MAX_CHARS = 60_000
   PROMPT = <<~TEXT.freeze
@@ -47,7 +45,6 @@ class XaiDocumentReview
       response = Net::HTTP.start(
         ENDPOINT.host, ENDPOINT.port, use_ssl: true, open_timeout: 5, read_timeout: 60
       ) { |http| http.request(request) }
-      enforce_zero_data_retention!(response, Error, "review")
       raise Error, "xAI returned HTTP #{response.code}" unless response.is_a?(Net::HTTPSuccess)
 
       parse(response.body)

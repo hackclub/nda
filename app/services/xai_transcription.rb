@@ -1,12 +1,9 @@
 require "net/http/post/multipart"
 
 class XaiTranscription
-  extend ZeroDataRetention
-
   ENDPOINT = URI("https://api.x.ai/v1/stt")
 
   class Error < StandardError; end
-  class RetentionError < Error; end
 
   def self.call(uploaded_file)
     api_key = ENV["XAI_API_KEY"]
@@ -21,7 +18,6 @@ class XaiTranscription
     response = Net::HTTP.start(ENDPOINT.host, ENDPOINT.port, use_ssl: true, open_timeout: 10, read_timeout: 90) do |http|
       http.request(request)
     end
-    enforce_zero_data_retention!(response, RetentionError, "transcription")
     raise Error, "xAI returned HTTP #{response.code}" unless response.is_a?(Net::HTTPSuccess)
 
     JSON.parse(response.body).fetch("text")

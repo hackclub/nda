@@ -8,25 +8,13 @@ class XaiTranscriptionTest < ActiveSupport::TestCase
     )
   end
 
-  test "returns the transcript when xAI confirms zero data retention" do
-    with_response(zdr: "true") do
-      assert_equal "I pledge.", XaiTranscription.call(@video)
-    end
-  end
-
-  test "returns the transcript when the zero data retention header is missing" do
-    with_response(zdr: nil) do
-      assert_equal "I pledge.", XaiTranscription.call(@video)
-    end
-  end
-
-  test "rejects a response that reports zero data retention is off" do
+  test "returns the transcript without checking zero data retention" do
     with_response(zdr: "false") do
-      assert_raises(XaiTranscription::RetentionError) { XaiTranscription.call(@video) }
+      assert_equal "I pledge.", XaiTranscription.call(@video)
     end
   end
 
-  test "reports an error response when the zero data retention header is missing" do
+  test "reports an error response" do
     with_response(zdr: nil, code: "500", body: "boom") do
       error = assert_raises(XaiTranscription::Error) { XaiTranscription.call(@video) }
       assert_equal "xAI returned HTTP 500", error.message
@@ -39,7 +27,7 @@ class XaiTranscriptionTest < ActiveSupport::TestCase
     response = Net::HTTPResponse.send(:response_class, code).new("1.1", code, "")
     response.instance_variable_set(:@body, body)
     response.instance_variable_set(:@read, true)
-    response[ZeroDataRetention::HEADER] = zdr if zdr
+    response["x-zero-data-retention"] = zdr if zdr
 
     singleton = Net::HTTP.singleton_class
     original = singleton.instance_method(:start)
