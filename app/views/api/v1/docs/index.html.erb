@@ -1,0 +1,62 @@
+<% content_for :title, "API Documentation · Hack Club NDA" %>
+<% content_for :body_class, "docs-page" %>
+
+<section class="docs-shell">
+  <div class="docs-intro">
+    <span class="eyebrow">Public API · v1</span>
+    <h1>NDA status API</h1>
+    <p>Check whether a Hack Club member has signed the current NDA. This endpoint is public, requires no authentication, and returns no private identity information.</p>
+    <%= link_to "OpenAPI 3.1 specification", openapi_path, class: "docs-spec-link" %>
+  </div>
+
+  <article class="docs-content">
+    <section class="docs-section">
+      <div class="endpoint-heading">
+        <span class="http-method">GET</span>
+        <code>/api/v1/nda_status/:slack_id</code>
+      </div>
+      <p>Replace <code>:slack_id</code> with a Slack member ID beginning with <code>U</code> or <code>W</code>, followed by 8–20 letters or numbers. IDs are normalized to uppercase.</p>
+
+      <h2>Request</h2>
+      <pre><code>curl <%= api_v1_nda_status_url(slack_id: "U0123ABCDEF") %></code></pre>
+    </section>
+
+    <section class="docs-section">
+      <h2>Successful response</h2>
+      <p>A known member with a signature for the current NDA receives <code>signed</code> and a signing timestamp.</p>
+      <pre><code>HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "slack_id": "U0123ABCDEF",
+  "status": "signed",
+  "nda_version": "<%= NdaDocument::VERSION %>",
+  "signed_at": "2025-04-02T15:04:05Z"
+}</code></pre>
+
+      <p>An unknown member, or a member without a signature for the current version, receives <code>not_signed</code>. In that case, <code>signed_at</code> is omitted.</p>
+      <pre><code>{
+  "slack_id": "U0123ABCDEF",
+  "status": "not_signed",
+  "nda_version": "<%= NdaDocument::VERSION %>"
+}</code></pre>
+    </section>
+
+    <section class="docs-section">
+      <h2>Invalid Slack ID</h2>
+      <p>Malformed IDs receive a <code>400 Bad Request</code>.</p>
+      <pre><code>{
+  "error": "invalid_slack_id"
+}</code></pre>
+    </section>
+
+    <section class="docs-section docs-notes">
+      <h2>Notes</h2>
+      <dl>
+        <div><dt>Authentication</dt><dd>None</dd></div>
+        <div><dt>Response type</dt><dd><code>application/json</code></dd></div>
+        <div><dt>Cache policy</dt><dd>Public, up to 30 seconds</dd></div>
+      </dl>
+    </section>
+  </article>
+</section>

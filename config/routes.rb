@@ -7,8 +7,11 @@ Rails.application.routes.draw do
 
   resource :nda_signature, only: %i[show create]
 
+  get "/openapi.json", to: "api/v1/docs#openapi", as: :openapi
+
   namespace :api do
     namespace :v1 do
+      get "docs", to: "docs#index", as: :docs
       get "nda_status/:slack_id", to: "nda_statuses#show", as: :nda_status
     end
   end
