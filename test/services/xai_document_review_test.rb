@@ -3,6 +3,7 @@ require_relative "../support/legacy_pdf_factory"
 
 class XaiDocumentReviewTest < ActiveSupport::TestCase
   def with_env(**values)
+    original = {}
     original = values.keys.to_h { |key| [ key.to_s, ENV[key.to_s] ] }
     values.each { |key, value| ENV[key.to_s] = value }
     yield
