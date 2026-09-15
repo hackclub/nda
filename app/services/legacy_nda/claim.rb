@@ -18,6 +18,7 @@ module LegacyNda
       def settle!(import)
         signature = import.user.nda_signatures.create!(attributes_for(import))
         import.update!(state: signature.verification_state, nda_signature: signature)
+        SyncSignatureToAirtableJob.perform_later(signature.id) if signature.approved? && AirtableClient.configured?
         import
       rescue ActiveRecord::RecordNotUnique
         reject!(import, "already_claimed")
@@ -38,6 +39,7 @@ module LegacyNda
         fields = import.verification
         {
           signature_type: "legacy",
+          legacy_source: "upload",
           verification_state: verdict_for(import),
           document_version: NdaDocument::LEGACY_VERSION,
           document_sha256: fields["document_sha256"],

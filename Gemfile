@@ -8,6 +8,7 @@ gem "vite_rails"
 gem "multipart-post"
 gem "countries", "~> 8.1"
 gem "pdf-reader", "~> 2.14"
+gem "prawn", "~> 2.5"
 gem "aws-sdk-s3", require: false
 gem "tzinfo-data"
 gem "solid_queue"

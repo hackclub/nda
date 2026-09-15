@@ -10,10 +10,12 @@ class NdaSignature < ApplicationRecord
   enum :signature_type, { native: "native", legacy: "legacy" }, default: "native", validate: true
   enum :verification_state, { approved: "approved", needs_review: "needs_review", rejected: "rejected" },
     default: "approved", validate: true
+  enum :legacy_source, { upload: "upload", airtable: "airtable" }, prefix: true, validate: { allow_nil: true }
 
-  validates :document_version, :document_sha256, :signed_name, :signed_at, presence: true
+  validates :document_version, :signed_name, :signed_at, presence: true
   validates :document_version, uniqueness: { scope: :user_id }
-  validates :document_sha256, format: { with: /\A[0-9a-f]{64}\z/ }
+  validates :document_sha256, presence: true, unless: :legacy_source_airtable?
+  validates :document_sha256, format: { with: /\A[0-9a-f]{64}\z/ }, allow_nil: true
   validates :signed_name, length: { maximum: 200 }
 
   with_options if: :native? do
@@ -23,7 +25,7 @@ class NdaSignature < ApplicationRecord
     validate :signed_name_matches_recipient
   end
 
-  with_options if: -> { legacy? && !rejected? } do
+  with_options if: -> { legacy? && !rejected? && !legacy_source_airtable? } do
     validates :legacy_signing_certificate_fingerprint, presence: true
     validates :legacy_document_sha256, presence: true, format: { with: /\A[0-9a-f]{64}\z/ }
   end

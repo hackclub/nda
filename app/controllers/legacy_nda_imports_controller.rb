@@ -3,6 +3,7 @@ class LegacyNdaImportsController < ApplicationController
 
   REJECTION = "We could not validate your NDA. If this keeps happening, please sign a new one.".freeze
   MAX_ATTEMPTS_PER_DAY = 5
+  TOO_MANY = "Slow down there, you already tried several times today! May I recommend that you just sign a new NDA instead?".freeze
 
   def show
     @import = current_import
@@ -12,7 +13,7 @@ class LegacyNdaImportsController < ApplicationController
     return redirect_to legacy_nda_import_path, notice: "You're already covered by an NDA." if already_covered?
 
     if attempts_today >= MAX_ATTEMPTS_PER_DAY
-      return redirect_to legacy_nda_import_path, alert: "Slow down there, you already tried several times today! May I recommend that you just sign a new NDA instead?"
+      return redirect_to legacy_nda_import_path, alert: TOO_MANY
     end
 
     document = params.require(:document)
@@ -20,10 +21,30 @@ class LegacyNdaImportsController < ApplicationController
       return redirect_to legacy_nda_import_path, alert: error
     end
 
-    import = current_user.legacy_nda_imports.create!(ip_address: request.remote_ip)
+    import = current_user.legacy_nda_imports.create!(source: "upload", ip_address: request.remote_ip)
     import.document.attach(document)
     VerifyLegacyNdaImportJob.perform_later(import.id)
     redirect_to legacy_nda_import_path, notice: "Checking your document. This usually takes a few seconds."
+  end
+
+  def lookup
+    return redirect_to legacy_nda_import_path, notice: "You're already covered by an NDA." if already_covered?
+
+    if attempts_today >= MAX_ATTEMPTS_PER_DAY
+      return redirect_to legacy_nda_import_path, alert: TOO_MANY
+    end
+
+    import = current_user.legacy_nda_imports.create!(source: "airtable", ip_address: request.remote_ip)
+    ImportAirtableNdaJob.perform_later(import.id)
+    redirect_to legacy_nda_import_path, notice: "Checking our records for your NDA."
+  end
+
+  def lookup_email
+    import = current_import
+    return redirect_to legacy_nda_import_path unless import&.email_pending?
+
+    LegacyNda::AirtableImport.challenge!(import, params[:email])
+    redirect_to legacy_nda_import_path
   end
 
   def challenge
@@ -34,7 +55,11 @@ class LegacyNdaImportsController < ApplicationController
       return redirect_to legacy_nda_import_path, alert: "That code isn't right, or it has expired."
     end
 
-    LegacyNda::Claim.settle!(import)
+    if import.source_airtable?
+      LegacyNda::AirtableImport.settle_challenge!(import)
+    else
+      LegacyNda::Claim.settle!(import)
+    end
     redirect_to legacy_nda_import_path
   end
 

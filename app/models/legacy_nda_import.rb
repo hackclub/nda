@@ -9,9 +9,11 @@ class LegacyNdaImport < ApplicationRecord
   has_one_attached :document
 
   enum :state, {
-    pending: "pending", verifying: "verifying", challenge_pending: "challenge_pending",
-    approved: "approved", needs_review: "needs_review", rejected: "rejected"
+    pending: "pending", verifying: "verifying", email_pending: "email_pending",
+    challenge_pending: "challenge_pending", approved: "approved", needs_review: "needs_review",
+    rejected: "rejected"
   }, default: "pending", validate: true
+  enum :source, { upload: "upload", airtable: "airtable" }, default: "upload", prefix: true, validate: true
 
   def purge_document!
     document.purge

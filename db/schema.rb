@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_15_153649) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_15_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -43,6 +43,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_153649) do
   end
 
   create_table "legacy_nda_imports", force: :cascade do |t|
+    t.string "airtable_record_id"
     t.integer "challenge_attempts", default: 0, null: false
     t.string "challenge_digest"
     t.string "challenge_email"
@@ -54,10 +55,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_153649) do
     t.string "ip_address"
     t.bigint "nda_signature_id"
     t.jsonb "reasons", default: [], null: false
+    t.string "source", default: "upload", null: false
     t.string "state", default: "pending", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.jsonb "verification"
+    t.index ["airtable_record_id"], name: "index_legacy_nda_imports_on_airtable_record_id"
     t.index ["created_at"], name: "index_legacy_nda_imports_on_created_at"
     t.index ["document_sha256"], name: "index_legacy_nda_imports_on_document_sha256"
     t.index ["nda_signature_id"], name: "index_legacy_nda_imports_on_nda_signature_id"
@@ -66,10 +69,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_153649) do
   end
 
   create_table "nda_signatures", force: :cascade do |t|
+    t.string "airtable_record_id"
+    t.datetime "airtable_synced_at"
     t.string "cosigner_email"
     t.string "cosigner_name"
     t.datetime "created_at", null: false
-    t.string "document_sha256", null: false
+    t.string "document_sha256"
     t.string "document_version", null: false
     t.datetime "identity_video_purged_at"
     t.string "ip_address"
@@ -80,6 +85,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_153649) do
     t.string "legacy_signer_email"
     t.string "legacy_signer_name"
     t.string "legacy_signing_certificate_fingerprint"
+    t.string "legacy_source"
     t.jsonb "legacy_verification"
     t.text "review_note"
     t.datetime "reviewed_at"
@@ -93,6 +99,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_153649) do
     t.bigint "user_id", null: false
     t.decimal "validation_score", precision: 5, scale: 4
     t.string "verification_state", default: "approved", null: false
+    t.index ["airtable_record_id"], name: "index_nda_signatures_on_airtable_record_id", unique: true, where: "(airtable_record_id IS NOT NULL)"
     t.index ["legacy_document_sha256"], name: "index_nda_signatures_on_legacy_document_sha256", unique: true, where: "(legacy_document_sha256 IS NOT NULL)"
     t.index ["legacy_envelope_id"], name: "index_nda_signatures_on_legacy_envelope_id", unique: true, where: "(legacy_envelope_id IS NOT NULL)"
     t.index ["reviewed_by_id"], name: "index_nda_signatures_on_reviewed_by_id"
@@ -256,6 +263,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_153649) do
     t.string "address_line_1"
     t.string "address_line_2"
     t.boolean "admin", default: false, null: false
+    t.datetime "airtable_checked_at"
     t.date "birthdate"
     t.string "city"
     t.string "country"

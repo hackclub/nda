@@ -17,11 +17,22 @@
        file it automatically. Someone from Hack Club will review it by hand. You don't need to do
        anything else, and we'll message you on Slack when it's done.</p>
 
+  <% elsif @import&.email_pending? %>
+    <h1>What email did you sign with?</h1>
+    <p>We couldn't find an NDA under <strong><%= current_user.email %></strong>. If you signed with a
+       different address, enter it below and we'll send a six-digit code there to confirm it's yours.</p>
+    <%= form_with url: lookup_email_legacy_nda_import_path, class: "wizard-form" do |form| %>
+      <div class="form-card">
+        <label>Email address<%= email_field_tag :email, nil, required: true, autocomplete: "email" %></label>
+        <%= form.submit "Send me a code", class: "button button-primary" %>
+      </div>
+    <% end %>
+    <p class="recorder-note">Have the signed PDF instead? <%= link_to "Upload it", legacy_nda_import_path %>.</p>
+
   <% elsif @import&.challenge_pending? %>
     <h1>Confirm your email</h1>
-    <p>The NDA you uploaded was signed from a different email address than your Hack Club account.
-       We've sent a six-digit code to <strong><%= @import.masked_challenge_email %></strong> so you
-       can confirm it's yours.</p>
+    <p>If that address has an NDA on file, we've sent a six-digit code to
+       <strong><%= @import.masked_challenge_email %></strong> so you can confirm it's yours.</p>
     <%= form_with url: challenge_legacy_nda_import_path, class: "wizard-form" do |form| %>
       <div class="form-card">
         <label>Six-digit code<%= text_field_tag :code, nil, required: true, autocomplete: "one-time-code", inputmode: "numeric", pattern: "[0-9]{6}" %></label>
@@ -30,18 +41,33 @@
     <% end %>
 
   <% elsif @import && (@import.pending? || @import.verifying?) %>
-    <h1>Checking your document</h1>
-    <p class="processing-status" role="status" data-import-pending><strong>Upload received.</strong>
-       We're verifying the signature on your PDF. This usually takes a few seconds — this page will
-       update on its own.</p>
+    <% if @import.source_airtable? %>
+      <h1>Checking our records</h1>
+      <p class="processing-status" role="status" data-import-pending>We're looking for an NDA signed
+         under your email address. This usually takes a few seconds — this page will update on its own.</p>
+    <% else %>
+      <h1>Checking your document</h1>
+      <p class="processing-status" role="status" data-import-pending><strong>Upload received.</strong>
+         We're verifying the signature on your PDF. This usually takes a few seconds — this page will
+         update on its own.</p>
+    <% end %>
 
   <% else %>
     <h1>Import your existing NDA</h1>
-    <p class="lede">If you signed the Hack Club NDA through our old signing system, upload the
-       completed PDF here and we'll add it to your record. You won't need to sign again.</p>
+    <p class="lede">If you signed the Hack Club NDA through our old signing system, we can add it to
+       your record here. You won't need to sign again.</p>
     <% if @import&.rejected? %>
       <p class="flash flash-alert"><%= LegacyNdaImportsController::REJECTION %></p>
     <% end %>
+    <%= form_with url: lookup_legacy_nda_import_path, class: "wizard-form" do |form| %>
+      <div class="form-card">
+        <strong>Already signed one?</strong>
+        <p class="validation-note"><span>✦</span>We'll check Hack Club's records for an NDA signed
+           under your account's email address. No file needed.</p>
+        <%= form.submit "Yes, I already signed this", class: "button button-primary" %>
+      </div>
+    <% end %>
+    <p class="recorder-note">Or upload the signed PDF yourself:</p>
     <%= form_with url: legacy_nda_import_path, multipart: true, class: "wizard-form" do |form| %>
       <div class="form-card">
         <label class="upload-zone">

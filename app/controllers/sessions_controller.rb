@@ -23,8 +23,11 @@ class SessionsController < ApplicationController
       email: identity["primary_email"],
       admin: User.admin_slack_ids.include?(identity.fetch("slack_id").to_s.upcase)
     )
+    imported = check_existing_nda(user)
     reset_session
     session[:user_id] = user.id
+    return redirect_to legacy_nda_import_path, notice: "Welcome back! You already have an NDA on file." if imported
+
     redirect_to nda_signature_path, notice: "Signed in successfully."
   end
 
@@ -34,6 +37,15 @@ class SessionsController < ApplicationController
   end
 
   private
+
+  def check_existing_nda(user)
+    return nil unless AirtableClient.configured?
+
+    LegacyNda::AirtableImport.check_on_sign_in(user, ip: request.remote_ip)
+  rescue AirtableClient::Error => error
+    Rails.logger.warn("Airtable sign-in check failed: #{error.class}")
+    nil
+  end
 
   def oauth_error(error)
     Rails.logger.warn("Hack Club OAuth failed: #{error.message}")

@@ -3,6 +3,11 @@ class NdaSignaturesController < ApplicationController
 
   def show
     @signature = current_user.signature_for_current_version
+    @covered_by = current_user.reportable_nda_signature if @signature.nil?
+    respond_to do |format|
+      format.html
+      format.pdf { send_agreement }
+    end
   end
 
   def create
@@ -36,6 +41,7 @@ class NdaSignaturesController < ApplicationController
       signature.save!
     end
     NotifyNdaSignedJob.perform_later(signature.id) if SlackClient.configured?
+    SyncSignatureToAirtableJob.perform_later(signature.id) if AirtableClient.configured?
     redirect_to nda_signature_path, notice: "NDA signed on #{signature.signed_at.to_date.to_fs(:long)}."
   rescue PledgeValidator::Rejected => error
     enqueue_failure_notification
@@ -50,6 +56,13 @@ class NdaSignaturesController < ApplicationController
   end
 
   private
+
+  def send_agreement
+    return redirect_to nda_signature_path unless @signature
+
+    send_data NdaPdf.call(@signature), filename: NdaPdf.filename(@signature),
+      type: "application/pdf", disposition: "attachment"
+  end
 
   def enqueue_failure_notification
     NotifyNdaFailedJob.perform_later(current_user.id) if SlackClient.configured?

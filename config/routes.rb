@@ -8,6 +8,8 @@ Rails.application.routes.draw do
   resource :nda_signature, only: %i[show create]
   resource :legacy_nda_import, only: %i[show create] do
     post :challenge
+    post :lookup
+    post :lookup_email
   end
 
   namespace :admin do

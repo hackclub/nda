@@ -14,8 +14,10 @@ The agreement in `app/models/nda_document.rb` is a transcription of the Hack Clu
 - PostgreSQL 18
 - Vite + vanilla JS/CSS via `vite_rails` (no React, no importmap, no Tailwind in the frontend pipeline)
 - `countries` gem for the ISO 3166-1 list; Twemoji flag SVGs vendored, not installed from npm
+- Prawn for PDF generation, in pure Ruby with the built-in Type 1 faces (no browser, no `wkhtmltopdf`)
 - Bun 1.4.2 for all JavaScript (`packageManager` in `package.json`, lockfile is `bun.lock`)
 - Active Storage (disk in development, Cloudflare R2 with SSE-C in production)
+- Airtable holds the old signing system's NDA records and stays the shared source of truth (`AIRTABLE_TOKEN`, `AIRTABLE_BASE_ID`, `AIRTABLE_TABLE_ID`)
 - Solid Queue for the one recurring job, with its tables in the primary database and its supervisor inside Puma (`SOLID_QUEUE_IN_PUMA`). No Solid Cache or Solid Cable; production caches in-process.
 - Docker Hardened Images for Ruby 3.4 and Bun 1.x (floating tags, not digest-pinned)
 
@@ -66,10 +68,19 @@ Tests need Postgres. They mock xAI (`XaiTranscription.call`) and do not call liv
 | `app/services/legacy_nda/verifier.rb` | Layers 1-3 into approved / needs_review / rejected |
 | `app/services/legacy_nda/claim.rb` | Identity binding; the only place an import becomes a signature |
 | `app/services/legacy_nda/email_challenge.rb` | HMAC-stored one-time code to the document's address |
+| `app/services/legacy_nda/airtable_record.rb` | Looks up a signed row in the old system's Airtable base |
+| `app/services/legacy_nda/airtable_import.rb` | Turns a matched Airtable row into a legacy signature |
+| `app/services/airtable_client.rb` | Airtable REST + attachment upload |
+| `app/services/airtable_sync.rb` | Pushes a signature back to the Airtable base |
+| `app/services/nda_pdf.rb` | Renders a signed agreement as a PDF |
 | `app/services/loops_client.rb` | Transactional email via Loops (no ActionMailer in this app) |
 | `app/services/sse_customer_blob.rb` | Reads SSE-C blobs back; Active Storage cannot |
 | `app/models/legacy_nda_import.rb` | Upload workflow, audit row, retention |
 | `app/jobs/verify_legacy_nda_import_job.rb` | Runs verification off the request |
+| `app/jobs/import_airtable_nda_job.rb` | Looks a member up in Airtable off the request |
+| `app/jobs/sync_signature_to_airtable_job.rb` | Writes a new signature back to Airtable |
+| `app/jobs/attach_airtable_document_job.rb` | Fetches an imported PDF after the claim is settled |
+| `lib/tasks/airtable.rake` | One-off: tag pre-existing rows with `Source` |
 | `lib/tasks/legacy_documents.rake` | Decrypt one upload for review |
 | `config/legacy_signing_certificates.yml` | Pinned certificate fingerprints |
 | `app/services/hack_club_auth.rb` | auth.hackclub.com OAuth |
@@ -92,8 +103,9 @@ Tests need Postgres. They mock xAI (`XaiTranscription.call`) and do not call liv
 Routes of interest:
 
 - `GET /auth/hack_club` / `GET /auth/hack_club/callback` / `DELETE /logout`
-- `GET/POST /nda_signature`
+- `GET/POST /nda_signature`, `GET /nda_signature.pdf`
 - `GET/POST /legacy_nda_import`, `POST /legacy_nda_import/challenge`
+- `POST /legacy_nda_import/lookup`, `POST /legacy_nda_import/lookup_email`
 - `GET /admin/legacy_nda_imports`, `PATCH /admin/legacy_nda_imports/:id`
 - `GET /api/v1/nda_status/:slack_id`
 
@@ -106,10 +118,16 @@ Routes of interest:
   them for a CDN or an emoji font, which Windows does not render.
 - Keep the frontend vanilla. The wizard is a small script in `application.js`; CSS is one file. Do not introduce a JS framework, CSS framework, or importmap.
 - Keep JS package changes in `package.json` + `bun.lock` via `bun`.
-- The `@media print` block in `application.css` is the PDF export path (`window.print()` -> Save as PDF); there is
-  no PDF toolchain. Keep the serif `font-family` override on `.print-contract *` (the UI font exports as a Type 3
-  font, which breaks text extraction and PDF/A), the `:root, body` white background (the root background paints the
-  page box), `overflow: visible`, and the break-control rules. See "Exporting the signed agreement" in `README.md`.
+- There are two ways out to PDF and both must keep working. `NdaPdf` renders server-side with Prawn and is what
+  `GET /nda_signature.pdf` and the Airtable upload use. The `@media print` block in `application.css` is the
+  browser path (`window.print()` -> Save as PDF). Keep the serif `font-family` override on `.print-contract *` (the
+  UI font exports as a Type 3 font, which breaks text extraction and PDF/A), the `:root, body` white background
+  (the root background paints the page box), `overflow: visible`, and the break-control rules. See "Exporting the
+  signed agreement" in `README.md`.
+- `NdaPdf` must stay pure Ruby. Production is shell-free, so a headless browser, `wkhtmltopdf` or anything else
+  that needs a subprocess cannot run there. It uses the built-in Type 1 faces deliberately: they need no embedding
+  and keep the text extractable, which is the same reason the print stylesheet forces a serif family. An embedded
+  TrueType font would also work, but check `LegacyNda::ContentMatch` still passes on the output before swapping.
 - Keep the Dockerfile at two stages (`build` then `production`). Bring Bun in with `COPY --from=dhi.io/bun:1-debian13-dev`, not a third `FROM`. Keep DHI floating tags (`dhi.io/ruby:3.4-dev`, `dhi.io/ruby:3.4`, `dhi.io/bun:1-debian13-dev`). Do not re-add digest pins or switch to unhardened `ruby:` / `oven/bun` images.
 - Production runtime is shell-free. `bin/docker-entrypoint` and `HEALTHCHECK` must keep working without `/bin/sh` (they already exec via Ruby).
 - Orchard pulls `dhi.io` with `DHI_USERNAME` + `DHI_TOKEN` (or `DOCKER_AUTH_CONFIG`) set as app secrets. Those keys are builder pull auth, not Rails runtime.
@@ -139,8 +157,18 @@ Other rules:
 - `.env` is gitignored; only `.env.example` is tracked (placeholders only).
 - Identity videos, transcripts, addresses, birthdates, IPs, and co-signer data are sensitive. Do not log them, dump them in errors, or include them in fixtures beyond what tests need.
 - Identity videos are uploaded to R2 with SSE-C (`R2_SSE_CUSTOMER_KEY`, exactly 32 characters). Keep it that way: without SSE-C, anyone with Cloudflare dashboard access can watch them. Active Storage cannot read SSE-C objects back, which is why `config.active_storage.analyzers` is empty and why review goes through `identity_videos:download`.
+- `AirtableSync` also sends a copy of the video and the transcript to Airtable, by product decision, where anyone with base access can watch it. That is a deliberate exception to the line above, not an oversight: R2 stays the encrypted store, and Airtable holds the same second copy it has always held for the old system. Airtable will only take file bytes up to 5 MB (`AirtableClient::MAX_ATTACHMENT_BYTES`) and cannot read an SSE-C object itself, so a longer video is logged and skipped. Do not work around that cap by serving videos from a public or signed URL; that would add a second unauthenticated data surface.
 - Identity videos are kept for the life of the signature: there is no retention window and no scheduled purge. `purge_identity_video!` exists for a one-off deletion by hand and is deliberately not on a schedule. The R2 bucket stays private; videos are never linked publicly.
 - Uploaded legacy NDAs are at least as sensitive as an identity video: they carry the signer's name, personal email, signature image, IP address, device string and full co-signer details. They go to R2 with SSE-C like videos and are kept for the life of the import, with `purge_document!` there for a one-off deletion by hand. Read them back only through `SseCustomerBlob` / `legacy_documents:download`.
+- `AIRTABLE_TOKEN` stays server-side and grants write access to every personal detail in the base. `AIRTABLE_BASE_ID` and `AIRTABLE_TABLE_ID` are configuration, not secrets.
+- The Airtable base is the old signing system's record of who has an NDA. It holds no Slack ID, so an email address is the only join key, and a bulk backfill is impossible — an import can only ever start from a signed-in member. A row counts as signed only when `{Signed?}` is true; 396 of its rows are people who started and never finished, and those must never read as a signature.
+- An Airtable match proves somebody signed, never who is asking. Settle a claim only on the verified Hack Club Auth account email or a passed email challenge, exactly as for an uploaded PDF, and record the row id in `airtable_record_id` so one row cannot be claimed twice.
+- `LegacyNda::AirtableImport.check_on_sign_in` runs one query per member, once, gated on `users.airtable_checked_at`, and the callback swallows every `AirtableClient::Error`. A login must never fail or stall because the base is slow or down, so keep the lookup out of the settling work: the PDF is fetched afterwards by `AttachAirtableDocumentJob`.
+- `LegacyNda::AirtableImport.challenge!` must answer identically whether or not the address is in the base. Naming an address that is present would turn the importer into a directory of who signed an NDA.
+- Airtable formulas take double-quoted strings. Every value interpolated into `filterByFormula` goes through `AirtableClient.quote`, or an address can rewrite the filter.
+- `Signed?`, `Signed NDA - Last Modified At` and the `Loops - *` fields are formulas or computed; writing them fails. `Signed?` is driven by the `Signed NDA` attachment, so the only way to make a native signature read as signed in the base is to upload a rendered agreement to that field, which `AirtableSync#attach_agreement` does. `Source` records which system produced it.
+- Attachment uploads append to a cell instead of replacing it, so `AirtableSync` sends files on the first sync only (`airtable_synced_at`). Dropping that guard duplicates every attachment on every later sync.
+- A field name reaches `uploadAttachment` in the URL path, and `Signed NDA` contains a space. Keep it percent-encoded.
 - Legacy import rejection copy must stay generic (`LegacyNdaImportsController::REJECTION`). Reason codes go to the audit record, never to the page: naming the failed check turns the importer into a forgery oracle.
 - Verifying a legacy PDF proves the document is authentic Hack Club output. It proves nothing about who uploaded it, and a leaked PDF verifies perfectly. Never settle a claim without either an account-email match or a passed email challenge, and never settle one at all for a document carrying no address.
 - Legacy signing certificates are trusted by pinning only (`config/legacy_signing_certificates.yml`). Do not add chain validation, do not enforce the certificate validity window — real documents were signed after it expired — and do not drop a pin that ever signed a real NDA.
@@ -157,6 +185,12 @@ Other rules:
 - `signed_name` must case-insensitively match `legal_first_name` + `legal_last_name`. Native signatures only: the video, transcript, co-signer and legal-name checks are all conditional on `signature_type == "native"`.
 - Legacy fixtures are generated at test time by `test/support/legacy_pdf_factory.rb`, which builds a real PAdES-signed PDF with a throwaway key. Never commit a real person's NDA. Pin the test certificate with `LegacyNda::CertificateAllowlist.default = LegacyPdfFactory.allowlist` and `reset!` afterwards.
 - Stub `LoopsClient.send_email` the way `test/jobs/verify_legacy_nda_import_job_test.rb` does. No live network anywhere.
+- Stub Airtable with `AirtableStub#with_airtable` (`test/support/airtable_stub.rb`). The fake parses the `filterByFormula` the code actually builds, so an unescaped or malformed filter fails the test rather than silently matching.
+- `config.active_job.queue_adapter = :test` in `config/environments/test.rb` is load-bearing. Active Job otherwise
+  defaults to `:async`, which really runs enqueued jobs on a thread pool during tests, lets them reach the network,
+  and then blocks process exit on their retry backoff. Do not remove it.
+- `NdaPdfTest` asserts the generated PDF passes `LegacyNda::ContentMatch` (18/18 headings). That is the regression
+  test for the renderer: if a layout change starts dropping or mangling text, extraction catches it.
 - `LoopsClient` is a stub: the transport is real, but the challenge template still has to be built in Loops and named by `LOOPS_IMPORT_CHALLENGE_TRANSACTIONAL_ID`. The body lives in that template, not in this repo.
 - Content match thresholds are provisional, measured on three real samples that all scored 1.0 containment with 18/18 headings. Gate on containment, not Jaccard: a genuine document carrying an appendix keeps containment 1.0 while its Jaccard falls.
 - Not every legacy document has a signing certificate page, and not every one is `ETSI.CAdES.detached` (`adbe.pkcs7.detached` is also real). A document with no certificate page is authentic but names no address, so it can only ever reach `needs_review`.

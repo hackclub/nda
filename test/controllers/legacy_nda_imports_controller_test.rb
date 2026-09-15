@@ -89,4 +89,57 @@ class LegacyNdaImportsControllerTest < ActionController::TestCase
 
     assert_select "[data-import-pending]"
   end
+
+  test "offers the records check alongside the upload form" do
+    get :show
+
+    assert_response :success
+    assert_select "form[action=?]", lookup_legacy_nda_import_path
+  end
+
+  test "checking the records needs no file and does not block the request" do
+    assert_enqueued_with(job: ImportAirtableNdaJob) do
+      post :lookup
+    end
+
+    import = users(:one).legacy_nda_imports.sole
+    assert_predicate import, :source_airtable?
+    assert_predicate import, :pending?
+    assert_not import.document.attached?
+  end
+
+  test "the records check counts against the same daily limit" do
+    LegacyNdaImportsController::MAX_ATTEMPTS_PER_DAY.times { users(:one).legacy_nda_imports.create! }
+
+    post :lookup
+
+    assert_equal LegacyNdaImportsController::MAX_ATTEMPTS_PER_DAY, users(:one).legacy_nda_imports.count
+    assert_match(/sign a new NDA instead/i, flash[:alert])
+  end
+
+  test "does not check the records for a member who is already covered" do
+    create_signature(users(:one), signed_at: Time.current)
+
+    post :lookup
+
+    assert_empty users(:one).legacy_nda_imports
+    assert_match(/already covered/i, flash[:notice])
+  end
+
+  test "asks for another address when the account email finds nothing" do
+    users(:one).legacy_nda_imports.create!(source: "airtable", state: "email_pending")
+
+    get :show
+
+    assert_response :success
+    assert_select "form[action=?]", lookup_email_legacy_nda_import_path
+  end
+
+  test "will not take an address unless the import is waiting for one" do
+    users(:one).legacy_nda_imports.create!(source: "airtable", state: "pending")
+
+    post :lookup_email, params: { email: "ada@example.com" }
+
+    assert_predicate users(:one).legacy_nda_imports.sole, :pending?
+  end
 end

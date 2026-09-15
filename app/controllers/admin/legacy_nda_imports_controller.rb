@@ -23,6 +23,7 @@ class Admin::LegacyNdaImportsController < ApplicationController
   def approve!(signature)
     signature.update!(verification_state: "approved", **review_attributes)
     signature.legacy_nda_import&.update!(state: "approved")
+    SyncSignatureToAirtableJob.perform_later(signature.id) if AirtableClient.configured?
   end
 
   def revoke!(signature)

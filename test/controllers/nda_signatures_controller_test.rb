@@ -7,6 +7,47 @@ class NdaSignaturesControllerTest < ActionDispatch::IntegrationTest
   end
 end
 
+class NdaSignaturesControllerPdfTest < ActionController::TestCase
+  tests NdaSignaturesController
+
+  setup { session[:user_id] = users(:one).id }
+
+  test "hands a signed member their agreement as a PDF" do
+    signature = create_signature(users(:one), signed_at: Time.current)
+
+    get :show, format: :pdf
+
+    assert_response :success
+    assert_equal "application/pdf", response.media_type
+    assert_match(/filename="Ada Lovelace - Hack Club Contributor NDA.pdf"/, response.headers["Content-Disposition"])
+    assert response.body.start_with?("%PDF-"), "expected a PDF"
+    assert_equal NdaPdf.call(signature).bytesize, response.body.bytesize
+  end
+
+  test "has no PDF to hand over before anyone has signed" do
+    get :show, format: :pdf
+
+    assert_redirected_to nda_signature_path
+  end
+
+  test "offers the download on the receipt" do
+    create_signature(users(:one), signed_at: Time.current)
+
+    get :show
+
+    assert_select "a[href=?]", nda_signature_path(format: :pdf)
+  end
+
+  test "tells a legacy holder they are already covered instead of nothing" do
+    create_legacy_signature(users(:one))
+
+    get :show
+
+    assert_select "p.flash-notice", /already have an NDA on file/i
+    assert_select "a[href=?]", legacy_nda_import_path
+  end
+end
+
 class NdaSignaturesControllerFormTest < ActionController::TestCase
   tests NdaSignaturesController
 
