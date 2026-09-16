@@ -5,7 +5,6 @@ class VerifyLegacyNdaImportJobTest < ActiveJob::TestCase
   setup do
     @user = users(:one)
     @user.update!(email: "ada@example.com")
-    @sent = []
     LegacyNda::CertificateAllowlist.default = LegacyPdfFactory.allowlist
   end
 
@@ -27,7 +26,7 @@ class VerifyLegacyNdaImportJobTest < ActiveJob::TestCase
     import = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "ada@example.com"))
 
     assert_predicate import, :approved?
-    assert_empty @sent, "no challenge is needed when the account email already matches"
+    assert_empty sent_mail_for(:import_challenge), "no challenge is needed when the account email already matches"
 
     signature = import.nda_signature
     assert_equal "legacy", signature.signature_type
@@ -58,12 +57,12 @@ class VerifyLegacyNdaImportJobTest < ActiveJob::TestCase
     assert_predicate import, :challenge_pending?
     assert_nil import.nda_signature
     assert_nil @user.reload.reportable_nda_signature
-    assert_equal [ "personal@example.com" ], @sent.map { _1[:to] }
+    assert_equal [ "personal@example.com" ], sent_mail_for(:import_challenge).map { _1[:to] }
   end
 
   test "the challenge code never reaches the database in the clear" do
     import = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "personal@example.com"))
-    code = @sent.first[:data_variables][:code]
+    code = sent_mail_for(:import_challenge).first[:data_variables]["challenge_code"]
 
     assert code.present?
     assert_not_includes import.challenge_digest, code
@@ -72,7 +71,7 @@ class VerifyLegacyNdaImportJobTest < ActiveJob::TestCase
 
   test "a correct code settles the claim" do
     import = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "personal@example.com"))
-    code = @sent.first[:data_variables][:code]
+    code = sent_mail_for(:import_challenge).first[:data_variables]["challenge_code"]
 
     assert LegacyNda::EmailChallenge.verify(import, code)
     LegacyNda::Claim.settle!(import)
@@ -91,7 +90,7 @@ class VerifyLegacyNdaImportJobTest < ActiveJob::TestCase
 
   test "an expired code does not settle the claim" do
     import = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "personal@example.com"))
-    code = @sent.first[:data_variables][:code]
+    code = sent_mail_for(:import_challenge).first[:data_variables]["challenge_code"]
     import.update!(challenge_expires_at: 1.second.ago)
 
     assert_not LegacyNda::EmailChallenge.verify(import, code)
@@ -99,7 +98,7 @@ class VerifyLegacyNdaImportJobTest < ActiveJob::TestCase
 
   test "codes run out after a handful of guesses" do
     import = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "personal@example.com"))
-    code = @sent.first[:data_variables][:code]
+    code = sent_mail_for(:import_challenge).first[:data_variables]["challenge_code"]
     LegacyNdaImport::MAX_CHALLENGE_ATTEMPTS.times { LegacyNda::EmailChallenge.verify(import, "000000") }
 
     assert_not LegacyNda::EmailChallenge.verify(import, code)
@@ -107,7 +106,7 @@ class VerifyLegacyNdaImportJobTest < ActiveJob::TestCase
 
   test "a code cannot be used twice" do
     import = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "personal@example.com"))
-    code = @sent.first[:data_variables][:code]
+    code = sent_mail_for(:import_challenge).first[:data_variables]["challenge_code"]
 
     assert LegacyNda::EmailChallenge.verify(import, code)
     assert_not LegacyNda::EmailChallenge.verify(import, code)
@@ -150,7 +149,7 @@ class VerifyLegacyNdaImportJobTest < ActiveJob::TestCase
     import = verify_import(LegacyPdfFactory.legacy_document_pdf(certificate_page: false))
 
     assert_predicate import, :needs_review?
-    assert_empty @sent, "there is no address on the document to challenge"
+    assert_empty sent_mail_for(:import_challenge), "there is no address on the document to challenge"
     assert_predicate import.nda_signature, :needs_review?
     assert_nil @user.reload.reportable_nda_signature
   end
@@ -161,21 +160,5 @@ class VerifyLegacyNdaImportJobTest < ActiveJob::TestCase
     assert_predicate import, :needs_review?
     assert_predicate import.nda_signature, :needs_review?
     assert_nil @user.reload.reportable_nda_signature
-  end
-
-  private
-
-  def with_stubbed_mail
-    sent = @sent
-    singleton = nil
-    original = nil
-    singleton = LoopsClient.singleton_class
-    original = singleton.instance_method(:send_email)
-    singleton.define_method(:send_email) { |to:, transactional_id:, data_variables: {}|
-      sent << { to:, transactional_id:, data_variables: }
-    }
-    yield
-  ensure
-    singleton.define_method(:send_email, original) if singleton && original
   end
 end

@@ -56,6 +56,7 @@ module LegacyNda
         import.update!(airtable_record_id: record.id)
         signature = import.user.nda_signatures.create!(attributes_for(import, record))
         import.update!(state: "approved", nda_signature: signature)
+        ImportMailer.settled(import)
         AttachAirtableDocumentJob.perform_later(import.id)
         SyncSignatureToAirtableJob.perform_later(signature.id) if AirtableClient.configured?
         import

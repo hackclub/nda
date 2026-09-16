@@ -12,7 +12,6 @@ class LegacyNda::AirtableImportTest < ActiveSupport::TestCase
   setup do
     @user = users(:one)
     @user.update!(email: "ada@example.com")
-    @sent = []
   end
 
   def import_for(user = @user) = user.legacy_nda_imports.create!(source: "airtable", ip_address: "192.0.2.1")
@@ -66,7 +65,7 @@ class LegacyNda::AirtableImportTest < ActiveSupport::TestCase
     end
 
     assert_predicate import.reload, :challenge_pending?
-    assert_equal [ "ada@example.com" ], @sent.map { _1[:to] }
+    assert_equal [ "ada@example.com" ], sent_mail_for(:import_challenge).map { _1[:to] }
     assert import.challenge_digest.present?
   end
 
@@ -78,7 +77,7 @@ class LegacyNda::AirtableImportTest < ActiveSupport::TestCase
     end
 
     assert_predicate import.reload, :challenge_pending?, "the page must not reveal that the address is unknown"
-    assert_empty @sent
+    assert_empty sent_mail_for(:import_challenge)
     assert_nil import.challenge_digest
     assert_not LegacyNda::EmailChallenge.verify(import, "000000")
   end
@@ -89,7 +88,7 @@ class LegacyNda::AirtableImportTest < ActiveSupport::TestCase
     import.update!(state: "email_pending")
     with_airtable(rows: [ SIGNED ]) do
       with_stubbed_mail { LegacyNda::AirtableImport.challenge!(import, "ada@example.com") }
-      assert LegacyNda::EmailChallenge.verify(import, @sent.first[:data_variables][:code])
+      assert LegacyNda::EmailChallenge.verify(import, sent_mail_for(:import_challenge).first[:data_variables]["challenge_code"])
       LegacyNda::AirtableImport.settle_challenge!(import)
     end
 
@@ -117,19 +116,5 @@ class LegacyNda::AirtableImportTest < ActiveSupport::TestCase
 
     assert_predicate import.reload, :email_pending?
     assert_empty NdaSignature.all
-  end
-
-  private
-
-  def with_stubbed_mail
-    sent = @sent
-    singleton = LoopsClient.singleton_class
-    original = singleton.instance_method(:send_email)
-    singleton.define_method(:send_email) { |to:, transactional_id:, data_variables: {}|
-      sent << { to:, transactional_id:, data_variables: }
-    }
-    yield
-  ensure
-    singleton.define_method(:send_email, original)
   end
 end

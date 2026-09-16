@@ -8,8 +8,10 @@ class NdaSignature < ApplicationRecord
   has_one_attached :identity_video
 
   enum :signature_type, { native: "native", legacy: "legacy" }, default: "native", validate: true
-  enum :verification_state, { approved: "approved", needs_review: "needs_review", rejected: "rejected" },
-    default: "approved", validate: true
+  enum :verification_state, {
+    approved: "approved", awaiting_cosigner: "awaiting_cosigner", needs_review: "needs_review",
+    rejected: "rejected"
+  }, default: "approved", validate: true
   enum :legacy_source, { upload: "upload", airtable: "airtable" }, prefix: true, validate: { allow_nil: true }
 
   validates :document_version, :signed_name, :signed_at, presence: true
@@ -17,6 +19,7 @@ class NdaSignature < ApplicationRecord
   validates :document_sha256, presence: true, unless: :legacy_source_airtable?
   validates :document_sha256, format: { with: /\A[0-9a-f]{64}\z/ }, allow_nil: true
   validates :signed_name, length: { maximum: 200 }
+  validates :cosigner_signed_name, length: { maximum: 200 }, allow_nil: true
 
   with_options if: :native? do
     validates :transcript, presence: true
@@ -29,6 +32,12 @@ class NdaSignature < ApplicationRecord
     validates :legacy_signing_certificate_fingerprint, presence: true
     validates :legacy_document_sha256, presence: true, format: { with: /\A[0-9a-f]{64}\z/ }
   end
+
+  def requires_cosignature? = native? && cosigner_email.present? && user&.age.to_i < 18
+
+  def cosigned? = cosigner_signed_at.present?
+
+  def cosignature_pending? = requires_cosignature? && !cosigned?
 
   def purge_identity_video!
     identity_video.purge

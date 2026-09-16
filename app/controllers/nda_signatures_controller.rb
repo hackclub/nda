@@ -36,12 +36,18 @@ class NdaSignaturesController < ApplicationController
       cosigner_email: params[:cosigner_email]
     )
     signature.identity_video.attach(video)
+    signature.verification_state = "awaiting_cosigner" if signature.requires_cosignature?
     current_user.transaction do
       current_user.save!
       signature.save!
     end
-    NotifyNdaSignedJob.perform_later(signature.id) if SlackClient.configured?
-    SyncSignatureToAirtableJob.perform_later(signature.id) if AirtableClient.configured?
+    if signature.awaiting_cosigner?
+      Cosignature.invite!(signature)
+      return redirect_to nda_signature_path,
+        notice: "Almost there! We've emailed #{signature.cosigner_email} a link for your parent or guardian to sign."
+    end
+
+    SignatureCompletedJob.perform_later(signature.id)
     redirect_to nda_signature_path, notice: "NDA signed on #{signature.signed_at.to_date.to_fs(:long)}."
   rescue PledgeValidator::Rejected => error
     enqueue_failure_notification
@@ -55,10 +61,20 @@ class NdaSignaturesController < ApplicationController
     redirect_to nda_signature_path, alert: error.record.errors.full_messages.to_sentence
   end
 
+  def resend_cosigner_invite
+    signature = current_user.signature_for_current_version
+    unless signature && Cosignature.resendable?(signature)
+      return redirect_to nda_signature_path
+    end
+
+    Cosignature.invite!(signature)
+    redirect_to nda_signature_path, notice: "Sent a fresh link to #{signature.cosigner_email}."
+  end
+
   private
 
   def send_agreement
-    return redirect_to nda_signature_path unless @signature
+    return redirect_to nda_signature_path unless @signature&.approved?
 
     send_data NdaPdf.call(@signature), filename: NdaPdf.filename(@signature),
       type: "application/pdf", disposition: "attachment"

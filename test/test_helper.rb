@@ -1,9 +1,15 @@
 ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
+require_relative "support/mail_stub"
+
+raise "Vite test asset build failed" unless ViteRuby.commands.build
 
 module ActiveSupport
   class TestCase
+    include ActiveJob::TestHelper
+    include MailStub
+
     parallelize(workers: :number_of_processors)
     fixtures :all
 

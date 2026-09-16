@@ -120,17 +120,84 @@ class NdaSignaturesControllerSuccessTest < ActionController::TestCase
     ENV["SLACK_BOT_TOKEN"] = "test-token"
 
     assert_enqueued_with(job: NotifyNdaSignedJob) do
-      post :create, params: {
-        accepted: "1",
-        identity_video: fixture_file_upload("pledge.webm", "video/webm"),
-        signed_name: "Ada Lovelace",
-        user: SIGNING_DETAILS
-      }
+      perform_enqueued_jobs(only: SignatureCompletedJob) do
+        post :create, params: {
+          accepted: "1",
+          identity_video: fixture_file_upload("pledge.webm", "video/webm"),
+          signed_name: "Ada Lovelace",
+          user: SIGNING_DETAILS
+        }
+      end
     end
 
     assert_redirected_to nda_signature_path
   ensure
     ENV["SLACK_BOT_TOKEN"] = previous_token
     validator&.define_method(:verify!, original) if original
+  end
+end
+
+class NdaSignaturesControllerMinorTest < ActionController::TestCase
+  tests NdaSignaturesController
+
+  MINOR_DETAILS = SIGNING_DETAILS.merge(birthdate: Date.new(2011, 3, 4)).freeze
+
+  setup do
+    session[:user_id] = users(:one).id
+    @validator = PledgeValidator.singleton_class
+    @original = @validator.instance_method(:verify!)
+    @validator.define_method(:verify!) do |*, **|
+      PledgeValidator::Result.new(transcript: "I pledge.", score: 1.0)
+    end
+  end
+
+  teardown { @validator.define_method(:verify!, @original) }
+
+  def sign_as_minor
+    with_stubbed_mail do
+      post :create, params: {
+        accepted: "1",
+        identity_video: fixture_file_upload("pledge.webm", "video/webm"),
+        signed_name: "Ada Lovelace",
+        cosigner_name: "Byron Lovelace",
+        cosigner_email: "parent@example.com",
+        user: MINOR_DETAILS
+      }
+    end
+    users(:one).signature_for_current_version
+  end
+
+  test "a minor's signature waits for the guardian and emails them a link" do
+    signature = sign_as_minor
+
+    assert_predicate signature, :awaiting_cosigner?
+    assert_nil users(:one).reload.reportable_nda_signature
+    assert_equal [ "parent@example.com" ], sent_mail_for(:cosign_request).map { _1[:to] }
+  end
+
+  test "nothing is announced or pushed to Airtable while consent is outstanding" do
+    assert_no_enqueued_jobs(only: [ SignatureCompletedJob, NotifyNdaSignedJob, SyncSignatureToAirtableJob ]) do
+      sign_as_minor
+    end
+  end
+
+  test "the agreement is not downloadable until the guardian has signed" do
+    sign_as_minor
+    @request.env.delete("CONTENT_TYPE")
+
+    get :show, format: :pdf
+    assert_redirected_to nda_signature_path
+  end
+
+  test "a resend issues a fresh link but not a flood of them" do
+    signature = sign_as_minor
+    first = signature.cosigner_token_digest
+
+    with_stubbed_mail { post :resend_cosigner_invite }
+    assert_equal first, signature.reload.cosigner_token_digest, "a resend moments later is ignored"
+
+    signature.update!(cosigner_invited_at: 1.hour.ago)
+    with_stubbed_mail { post :resend_cosigner_invite }
+    assert_not_equal first, signature.reload.cosigner_token_digest
   end
 end

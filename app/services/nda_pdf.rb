@@ -90,9 +90,12 @@ class NdaPdf
     return if signature.cosigner_name.blank?
 
     pdf.move_down 6
+    return rows(pdf, { "Co-signer Signature" => "Awaiting signature from #{signature.cosigner_name}" }) unless signature.cosigned?
+
     rows(pdf, {
-      "Co-signer Signature" => signature.cosigner_name, "Printed Name" => signature.cosigner_name,
-      "Date" => signature.signed_at.to_fs(:long)
+      "Co-signer Signature" => signature.cosigner_signed_name,
+      "Printed Name" => signature.cosigner_signed_name,
+      "Date" => signature.cosigner_signed_at.to_fs(:long)
     })
   end
 
