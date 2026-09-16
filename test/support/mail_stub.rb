@@ -22,6 +22,7 @@ module MailStub
   private
 
   def with_loops_env
+    previous = {}
     values = { "LOOPS_API_KEY" => "test-loops-key" }
       .merge(LoopsClient::TEMPLATES.to_h { |name, var| [ var, "tmpl_#{name}" ] })
     previous = values.keys.to_h { |key| [ key, ENV[key] ] }
