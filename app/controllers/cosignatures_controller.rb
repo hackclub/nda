@@ -18,11 +18,11 @@ class CosignaturesController < ApplicationController
     end
 
     Cosignature.countersign!(
-      @signature, name: params[:cosigner_signed_name],
+      @signature, token: params[:token], name: params[:cosigner_signed_name],
       ip: request.remote_ip, user_agent: request.user_agent
     )
     render :done
-  rescue Cosignature::AlreadySigned
+  rescue Cosignature::AlreadySigned, Cosignature::InvalidToken
     render :expired, status: :not_found
   end
 

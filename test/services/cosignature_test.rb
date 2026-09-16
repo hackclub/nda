@@ -33,7 +33,9 @@ class CosignatureTest < ActiveSupport::TestCase
 
   test "countersigning approves the signature and records who signed" do
     token = invite_token
-    Cosignature.countersign!(Cosignature.find(token), name: " Byron  Lovelace ", ip: "192.0.2.9")
+    Cosignature.countersign!(
+      Cosignature.find(token), token: token, name: " Byron  Lovelace ", ip: "192.0.2.9"
+    )
 
     @signature.reload
     assert_predicate @signature, :approved?
@@ -60,7 +62,7 @@ class CosignatureTest < ActiveSupport::TestCase
     assert_nil Cosignature.find(token), "an expired link is dead"
 
     @signature.update!(cosigner_token_expires_at: 1.day.from_now)
-    Cosignature.countersign!(@signature, name: "Byron Lovelace")
+    Cosignature.countersign!(@signature, token: token, name: "Byron Lovelace")
     assert_nil Cosignature.find(token), "a used link is dead"
   end
 
@@ -74,10 +76,30 @@ class CosignatureTest < ActiveSupport::TestCase
   end
 
   test "a guardian cannot countersign twice" do
-    Cosignature.countersign!(@signature, name: "Byron Lovelace")
+    token = invite_token
+    Cosignature.countersign!(@signature, token: token, name: "Byron Lovelace")
 
-    assert_raises(Cosignature::AlreadySigned) { Cosignature.countersign!(@signature, name: "Someone Else") }
+    assert_raises(Cosignature::AlreadySigned) do
+      Cosignature.countersign!(@signature, token: token, name: "Someone Else")
+    end
     assert_raises(Cosignature::AlreadySigned) { Cosignature.invite!(@signature) }
+  end
+
+  test "only one request can consume a token" do
+    token = invite_token
+    first_request = Cosignature.find(token)
+    overlapping_request = Cosignature.find(token)
+
+    assert_enqueued_jobs 1, only: SignatureCompletedJob do
+      Cosignature.countersign!(first_request, token: token, name: "Byron Lovelace")
+    end
+    assert_raises(Cosignature::AlreadySigned) do
+      Cosignature.countersign!(overlapping_request, token: token, name: "Someone Else")
+    end
+
+    @signature.reload
+    assert_equal "Byron Lovelace", @signature.cosigner_signed_name
+    assert_equal 1, enqueued_jobs.count { _1[:job] == SignatureCompletedJob }
   end
 
   test "the invitation names the teen and carries a link, never their address or video" do

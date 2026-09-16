@@ -4,6 +4,7 @@ class Cosignature
   RESEND_INTERVAL = 2.minutes
 
   class AlreadySigned < StandardError; end
+  class InvalidToken < StandardError; end
 
   class << self
     def invite!(signature)
@@ -31,18 +32,21 @@ class Cosignature
       signature if signature&.cosigner_token_expires_at&.future?
     end
 
-    def countersign!(signature, name:, ip: nil, user_agent: nil)
-      raise AlreadySigned if signature.cosigned?
+    def countersign!(signature, token:, name:, ip: nil, user_agent: nil)
+      signature.with_lock do
+        raise AlreadySigned if signature.cosigned?
+        raise InvalidToken unless valid_token?(signature, token)
 
-      signature.update!(
-        verification_state: "approved",
-        cosigner_signed_name: name.to_s.squish,
-        cosigner_signed_at: Time.current,
-        cosigner_ip_address: ip,
-        cosigner_user_agent: user_agent,
-        cosigner_token_digest: nil,
-        cosigner_token_expires_at: nil
-      )
+        signature.update!(
+          verification_state: "approved",
+          cosigner_signed_name: name.to_s.squish,
+          cosigner_signed_at: Time.current,
+          cosigner_ip_address: ip,
+          cosigner_user_agent: user_agent,
+          cosigner_token_digest: nil,
+          cosigner_token_expires_at: nil
+        )
+      end
 
       SignatureCompletedJob.perform_later(signature.id)
       signature
@@ -51,6 +55,12 @@ class Cosignature
     def digest(token) = OpenSSL::HMAC.hexdigest("SHA256", key, token.to_s)
 
     private
+
+    def valid_token?(signature, token)
+      signature.awaiting_cosigner? && signature.cosigner_token_expires_at&.future? &&
+        signature.cosigner_token_digest.present? &&
+        ActiveSupport::SecurityUtils.secure_compare(signature.cosigner_token_digest, digest(token))
+    end
 
     def deliver_invitation(signature, token)
       SendEmailJob.deliver_later(
