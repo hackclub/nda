@@ -5,12 +5,17 @@ Rails.application.routes.draw do
   get "/auth/hack_club/callback", to: "sessions#callback", as: :oauth_callback
   delete "/logout", to: "sessions#destroy", as: :logout
 
-  resource :nda_signature, only: %i[show create]
+  resource :nda_signature, only: %i[show create] do
+    post :resend_cosigner_invite
+  end
   resource :legacy_nda_import, only: %i[show create] do
     post :challenge
     post :lookup
     post :lookup_email
   end
+
+  get "/cosign/:token", to: "cosignatures#show", as: :cosign
+  post "/cosign/:token", to: "cosignatures#create"
 
   namespace :admin do
     resources :legacy_nda_imports, only: %i[index update]

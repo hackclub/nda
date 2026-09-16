@@ -1,0 +1,8 @@
+<% content_for :title, "Link not available" %>
+<section class="shell receipt">
+  <h1>This link isn't available</h1>
+  <p>It may have already been used, or it may have expired. Links are good for
+    <%= Cosignature::TTL.inspect %> from when they're sent.</p>
+  <p>Ask the person who asked you to sign to send a fresh link from their Hack Club NDA page, or email
+    <a href="mailto:team@hackclub.com">team@hackclub.com</a> if you're stuck.</p>
+</section>

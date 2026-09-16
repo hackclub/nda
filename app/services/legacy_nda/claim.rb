@@ -19,6 +19,7 @@ module LegacyNda
         signature = import.user.nda_signatures.create!(attributes_for(import))
         import.update!(state: signature.verification_state, nda_signature: signature)
         SyncSignatureToAirtableJob.perform_later(signature.id) if signature.approved? && AirtableClient.configured?
+        signature.approved? ? ImportMailer.settled(import) : ImportMailer.needs_review(import)
         import
       rescue ActiveRecord::RecordNotUnique
         reject!(import, "already_claimed")
@@ -30,6 +31,7 @@ module LegacyNda
         if reason == "already_claimed"
           Rails.logger.warn("Legacy NDA import #{import.id}: user #{import.user_id} claimed a held envelope.")
         end
+        ImportMailer.rejected(import)
         import
       end
 

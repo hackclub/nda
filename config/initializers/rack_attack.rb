@@ -12,4 +12,12 @@ Rack::Attack.throttle("legacy import lookups per IP", limit: 10, period: 1.hour)
   request.ip if request.post? && request.path.in?(%w[/legacy_nda_import/lookup /legacy_nda_import/lookup_email])
 end
 
+Rack::Attack.throttle("cosignature attempts per IP", limit: 20, period: 1.hour) do |request|
+  request.ip if request.path.start_with?("/cosign/")
+end
+
+Rack::Attack.throttle("cosigner invite resends per IP", limit: 10, period: 1.hour) do |request|
+  request.ip if request.post? && request.path == "/nda_signature/resend_cosigner_invite"
+end
+
 Rack::Attack.throttled_response_retry_after_header = true

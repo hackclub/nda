@@ -30,10 +30,10 @@ module LegacyNda
       private
 
       def deliver(email, code)
-        LoopsClient.send_email(
+        SendEmailJob.deliver_later(
+          :import_challenge,
           to: email,
-          transactional_id: ENV["LOOPS_IMPORT_CHALLENGE_TRANSACTIONAL_ID"],
-          data_variables: { code: code, expiresIn: LegacyNdaImport::CHALLENGE_TTL.inspect }
+          data: { challenge_code: code, challenge_expiresIn: LegacyNdaImport::CHALLENGE_TTL.inspect }
         )
       end
 

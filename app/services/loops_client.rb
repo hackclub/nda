@@ -1,8 +1,17 @@
 require "net/http"
 
-# TODO: just a stub for now, but eventually this will be a full client for Loops txn emails
 class LoopsClient
   ENDPOINT = URI("https://app.loops.so/api/v1/transactional")
+
+  TEMPLATES = {
+    import_challenge: "LOOPS_IMPORT_CHALLENGE_TRANSACTIONAL_ID",
+    import_settled: "LOOPS_IMPORT_SETTLED_TRANSACTIONAL_ID",
+    import_rejected: "LOOPS_IMPORT_REJECTED_TRANSACTIONAL_ID",
+    import_needs_review: "LOOPS_IMPORT_NEEDS_REVIEW_TRANSACTIONAL_ID",
+    signature_receipt: "LOOPS_SIGNATURE_RECEIPT_TRANSACTIONAL_ID",
+    cosign_request: "LOOPS_COSIGN_REQUEST_TRANSACTIONAL_ID",
+    cosign_receipt: "LOOPS_COSIGN_RECEIPT_TRANSACTIONAL_ID"
+  }.freeze
 
   class Error < StandardError; end
   class ConfigurationError < Error; end
@@ -10,6 +19,14 @@ class LoopsClient
 
   class << self
     def configured? = ENV["LOOPS_API_KEY"].present?
+
+    def template_id(template) = ENV[TEMPLATES.fetch(template.to_sym)].presence
+
+    def deliverable?(template) = configured? && template_id(template).present?
+
+    def deliver(template, to:, data: {})
+      send_email(to: to, transactional_id: template_id(template), data_variables: data)
+    end
 
     def send_email(to:, transactional_id:, data_variables: {})
       raise ConfigurationError, "LOOPS_API_KEY is not configured" unless configured?

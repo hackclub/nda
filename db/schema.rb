@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_15_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_15_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -72,7 +72,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_190000) do
     t.string "airtable_record_id"
     t.datetime "airtable_synced_at"
     t.string "cosigner_email"
+    t.datetime "cosigner_invited_at"
+    t.string "cosigner_ip_address"
     t.string "cosigner_name"
+    t.datetime "cosigner_reminded_at"
+    t.datetime "cosigner_signed_at"
+    t.string "cosigner_signed_name"
+    t.string "cosigner_token_digest"
+    t.datetime "cosigner_token_expires_at"
+    t.text "cosigner_user_agent"
     t.datetime "created_at", null: false
     t.string "document_sha256"
     t.string "document_version", null: false
@@ -100,6 +108,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_190000) do
     t.decimal "validation_score", precision: 5, scale: 4
     t.string "verification_state", default: "approved", null: false
     t.index ["airtable_record_id"], name: "index_nda_signatures_on_airtable_record_id", unique: true, where: "(airtable_record_id IS NOT NULL)"
+    t.index ["cosigner_token_digest"], name: "index_nda_signatures_on_cosigner_token_digest", unique: true, where: "(cosigner_token_digest IS NOT NULL)"
     t.index ["legacy_document_sha256"], name: "index_nda_signatures_on_legacy_document_sha256", unique: true, where: "(legacy_document_sha256 IS NOT NULL)"
     t.index ["legacy_envelope_id"], name: "index_nda_signatures_on_legacy_envelope_id", unique: true, where: "(legacy_envelope_id IS NOT NULL)"
     t.index ["reviewed_by_id"], name: "index_nda_signatures_on_reviewed_by_id"

@@ -1,9 +1,13 @@
 ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
+require_relative "support/mail_stub"
 
 module ActiveSupport
   class TestCase
+    include ActiveJob::TestHelper
+    include MailStub
+
     parallelize(workers: :number_of_processors)
     fixtures :all
 

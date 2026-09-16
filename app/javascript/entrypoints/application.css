@@ -160,10 +160,10 @@ blockquote p:last-child { margin-bottom: 0; }
 .receipt { max-width: 840px; margin: 60px auto 100px; }
 .receipt h1 { font-size: 44px; }
 .success-mark { float: right; color: var(--green); font-size: 24px; font-weight: 800; }
-.receipt dl { margin: 30px 0; border-top: 1px solid var(--line); }
-.receipt dl div { padding: 14px 0; display: grid; grid-template-columns: 180px 1fr; border-bottom: 1px solid var(--line); }
-.receipt dt { color: var(--muted); font-size: 12px; }
-.receipt dd { margin: 0; font-weight: 650; }
+.receipt dl, .cosign-summary { margin: 30px 0; border-top: 1px solid var(--line); }
+.receipt dl div, .cosign-summary div { padding: 14px 0; display: grid; grid-template-columns: 180px 1fr; border-bottom: 1px solid var(--line); }
+.receipt dt, .cosign-summary dt { color: var(--muted); font-size: 12px; }
+.receipt dd, .cosign-summary dd { margin: 0; font-weight: 650; }
 .signature-line { margin-top: 40px; padding-top: 20px; border-top: 1px solid #bbb; }
 .print-contract { max-height: none; margin-top: 40px; }
 
@@ -250,7 +250,7 @@ blockquote p:last-child { margin-bottom: 0; }
   .button-row .button { flex: 1; }
   .contract { padding: 20px; }
   .receipt { margin-top: 42px; }
-  .receipt dl div { grid-template-columns: 1fr; gap: 4px; }
+  .receipt dl div, .cosign-summary div { grid-template-columns: 1fr; gap: 4px; }
   .minimal-home { padding-left: 24px; padding-right: 24px; }
   .docs-shell { padding: 42px 20px 0; }
   .docs-header { margin-bottom: 36px; align-items: flex-start; flex-direction: column; gap: 22px; }
@@ -280,6 +280,7 @@ blockquote p:last-child { margin-bottom: 0; }
 .secondary-path { margin: 18px 0 0; text-align: center; font-size: 13px; color: var(--muted); }
 .secondary-path a { color: inherit; text-decoration: underline; }
 .legacy-import dl { margin-top: 18px; }
+.cosign .form-card + .form-card { margin-top: 24px; }
 
 .review-queue h2 { font-size: 18px; margin: 28px 0 12px; }
 .review-queue h2 small { font-weight: 400; color: var(--muted); font-size: 13px; }

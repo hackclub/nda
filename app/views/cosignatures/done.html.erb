@@ -1,0 +1,13 @@
+<% content_for :title, "Co-signed" %>
+<section class="shell receipt">
+  <div class="success-mark">✓</div><h1>Thank you for signing!</h1>
+  <p>The agreement between Hack Club and <strong><%= @signature.user.legal_name %></strong> is now complete.
+    We've emailed a copy of this confirmation to <strong><%= @signature.cosigner_email %></strong> for your records.</p>
+  <dl>
+    <div><dt>Co-signed by</dt><dd><%= @signature.cosigner_signed_name %></dd></div>
+    <div><dt>Co-signed at</dt><dd><time datetime="<%= @signature.cosigner_signed_at.iso8601 %>" data-local-time><%= @signature.cosigner_signed_at.to_fs(:long) %></time></dd></div>
+    <div><dt>Document version</dt><dd><%= @signature.document_version %></dd></div>
+  </dl>
+  <p class="recorder-note">This link has now been used and won't work again. If you have questions about this
+    agreement, email <a href="mailto:team@hackclub.com">team@hackclub.com</a>.</p>
+</section>

@@ -26,10 +26,13 @@
       <p><strong>Recipient Signature:</strong> <%= signature.signed_name %><br>
         <strong>Printed Name:</strong> <%= signature.user.legal_name %><br>
         <strong>Date:</strong> <%= signature.signed_at.to_fs(:long) %></p>
-      <% if signature.cosigner_name.present? %>
-        <p><strong>Co-signer Signature:</strong> <%= signature.cosigner_name %><br>
-          <strong>Printed Name:</strong> <%= signature.cosigner_name %><br>
-          <strong>Date:</strong> <%= signature.signed_at.to_fs(:long) %></p>
+      <% if signature.cosigned? %>
+        <p><strong>Co-signer Signature:</strong> <%= signature.cosigner_signed_name %><br>
+          <strong>Printed Name:</strong> <%= signature.cosigner_signed_name %><br>
+          <strong>Date:</strong> <%= signature.cosigner_signed_at.to_fs(:long) %></p>
+      <% elsif signature.cosigner_name.present? %>
+        <p><strong>Co-signer Signature:</strong> <em>Awaiting signature from <%= signature.cosigner_name %></em><br>
+          <strong>Printed Name:</strong> <%= signature.cosigner_name %></p>
       <% end %>
     </div>
     <div class="print-certificate">
