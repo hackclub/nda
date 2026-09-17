@@ -4,7 +4,7 @@
     <div class="success-mark">✓</div><h1>Your old NDA is on file!</h1>
     <p>We've imported the agreement you signed through our old signing system. Others can verify it
        using your Slack ID: <strong><%= current_user.slack_id %></strong>.</p>
-    <dl>
+    <dl class="receipt-details">
       <div><dt>Signed by</dt><dd><%= @import.nda_signature.signed_name %></dd></div>
       <div><dt>Signed at</dt><dd><time datetime="<%= @import.nda_signature.signed_at.iso8601 %>" data-local-time><%= @import.nda_signature.signed_at.to_fs(:long) %></time></dd></div>
       <div><dt>Document version</dt><dd><%= @import.nda_signature.document_version %></dd></div>

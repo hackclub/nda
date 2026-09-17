@@ -164,10 +164,10 @@ blockquote li + li { margin-top: 10px; }
 .receipt { max-width: 840px; margin: 60px auto 100px; }
 .receipt h1 { font-size: 44px; }
 .success-mark { float: right; color: var(--green); font-size: 24px; font-weight: 800; }
-.receipt dl, .cosign-summary { margin: 30px 0; border-top: 1px solid var(--line); }
-.receipt dl div, .cosign-summary div { padding: 14px 0; display: grid; grid-template-columns: 180px 1fr; border-bottom: 1px solid var(--line); }
-.receipt dt, .cosign-summary dt { color: var(--muted); font-size: 12px; }
-.receipt dd, .cosign-summary dd { margin: 0; font-weight: 650; }
+.receipt dl, .receipt-details, .cosign-summary { margin: 30px 0; border-top: 1px solid var(--line); }
+.receipt dl div, .receipt-details div, .cosign-summary div { padding: 14px 0; display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px; align-items: baseline; border-bottom: 1px solid var(--line); }
+.receipt dt, .receipt-details dt, .cosign-summary dt { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.receipt dd, .receipt-details dd, .cosign-summary dd { min-width: 0; margin: 0; font-weight: 650; overflow-wrap: anywhere; }
 .signature-line { margin-top: 40px; padding-top: 20px; border-top: 1px solid #bbb; }
 .print-contract { max-height: none; margin-top: 40px; }
 
@@ -254,7 +254,7 @@ blockquote li + li { margin-top: 10px; }
   .button-row .button { flex: 1; }
   .contract { padding: 20px; }
   .receipt { margin-top: 42px; }
-  .receipt dl div, .cosign-summary div { grid-template-columns: 1fr; gap: 4px; }
+  .receipt dl div, .receipt-details div, .cosign-summary div { grid-template-columns: 1fr; gap: 4px; }
   .minimal-home { padding-left: 24px; padding-right: 24px; }
   .docs-shell { padding: 42px 20px 0; }
   .docs-header { margin-bottom: 36px; align-items: flex-start; flex-direction: column; gap: 22px; }
