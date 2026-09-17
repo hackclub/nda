@@ -1,4 +1,16 @@
-<% if @signature&.native? && @signature.rejected? %>
+<% if @signature&.native? && @signature.processing? %>
+  <% content_for :title, "We're processing your NDA" %>
+  <section class="shell receipt" data-signature-processing>
+    <h1>We got your video!</h1>
+    <p>Your upload is safely on file and your NDA is being checked in the background. You can close this page.</p>
+    <dl>
+      <div><dt>Signed by</dt><dd><%= @signature.signed_name %></dd></div>
+      <div><dt>Submitted at</dt><dd><time datetime="<%= @signature.signed_at.iso8601 %>" data-local-time><%= @signature.signed_at.to_fs(:long) %></time></dd></div>
+      <div><dt>Status</dt><dd>Processing video pledge</dd></div>
+    </dl>
+    <p class="recorder-note">We'll message you on Slack when processing finishes. If your NDA is approved, we'll also send your receipt by email. This page will update automatically if you leave it open.</p>
+  </section>
+<% elsif @signature&.native? && @signature.rejected? %>
   <% content_for :title, "Recording saved for review" %>
   <section class="shell receipt">
     <h1>Your recording was saved</h1>
@@ -96,8 +108,8 @@
         <%= render "document" %>
         <label>Type your full legal name *<%= text_field_tag :signed_name, @signed_name, required: true, autocomplete: "name" %></label>
         <label class="check-row"><%= check_box_tag :accepted, "1", false, required: true %><span>I have read and agree to this Mutual Non-Disclosure Agreement and intend this electronic signature to be binding.</span></label>
-        <p class="processing-status" data-processing-status role="status" hidden><strong>Video submitted.</strong> Uploading, transcribing, and checking your pledge can take up to two minutes. Keep this page open.</p>
-        <div class="button-row"><button type="button" class="button button-secondary" data-back>Back</button><%= form.submit "Validate video & sign", class: "button button-primary", data: { submit_label: true } %></div>
+        <p class="processing-status" data-processing-status role="status" hidden><strong>Uploading your video…</strong> Once the upload finishes, you can close this page. We'll process it in the background and keep you updated.</p>
+        <div class="button-row"><button type="button" class="button button-secondary" data-back>Back</button><%= form.submit "Submit video & sign", class: "button button-primary", data: { submit_label: true } %></div>
       </section>
     <% end %>
     <% unless @covered_by %>

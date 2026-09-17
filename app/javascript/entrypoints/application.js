@@ -177,7 +177,7 @@ if (wizard) {
     wizard.querySelector("[data-processing-status]").hidden = false
     const submit = form.querySelector("[data-submit-label]")
     submit.disabled = true
-    submit.value = "Video submitted — processing…"
+    submit.value = "Uploading video…"
   })
 }
 
@@ -201,7 +201,7 @@ if (statusForm) statusForm.addEventListener("submit", async event => {
   } catch (error) { result.className = "lookup-result is-missing"; result.textContent = error.message }
 })
 
-if (document.querySelector("[data-import-pending]")) setTimeout(() => window.location.reload(), 3000)
+if (document.querySelector("[data-import-pending], [data-signature-processing]")) setTimeout(() => window.location.reload(), 3000)
 
 document.querySelectorAll("form[data-confirm]").forEach(form => form.addEventListener("submit", event => {
   if (!window.confirm(form.dataset.confirm)) event.preventDefault()

@@ -9,8 +9,8 @@ class NdaSignature < ApplicationRecord
 
   enum :signature_type, { native: "native", legacy: "legacy" }, default: "native", validate: true
   enum :verification_state, {
-    approved: "approved", awaiting_cosigner: "awaiting_cosigner", needs_review: "needs_review",
-    rejected: "rejected"
+    processing: "processing", approved: "approved", awaiting_cosigner: "awaiting_cosigner",
+    needs_review: "needs_review", rejected: "rejected"
   }, default: "approved", validate: true
   enum :legacy_source, { upload: "upload", airtable: "airtable" }, prefix: true, validate: { allow_nil: true }
 
@@ -26,7 +26,7 @@ class NdaSignature < ApplicationRecord
     validate :cosigner_present_for_minor
     validate :signed_name_matches_recipient
   end
-  validates :transcript, presence: true, if: -> { native? && !rejected? }
+  validates :transcript, presence: true, if: -> { native? && (approved? || awaiting_cosigner?) }
 
   with_options if: -> { legacy? && !rejected? && !legacy_source_airtable? } do
     validates :legacy_signing_certificate_fingerprint, presence: true

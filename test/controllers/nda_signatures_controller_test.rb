@@ -96,7 +96,7 @@ class NdaSignaturesControllerFormTest < ActionController::TestCase
   end
 end
 
-class NdaSignaturesControllerRetryTest < ActionController::TestCase
+class NdaSignaturesControllerSubmissionTest < ActionController::TestCase
   include ActiveJob::TestHelper
 
   tests NdaSignaturesController
@@ -105,42 +105,8 @@ class NdaSignaturesControllerRetryTest < ActionController::TestCase
     session[:user_id] = users(:one).id
   end
 
-  test "keeps entered details and returns to the video step when verification fails" do
-    singleton = PledgeValidator.singleton_class
-    original = singleton.instance_method(:verify!)
-    singleton.define_method(:verify!) { |_video, user:| raise PledgeValidator::Rejected, "No speech detected." }
-    previous_token = ENV["SLACK_BOT_TOKEN"]
-    ENV["SLACK_BOT_TOKEN"] = "test-token"
-
-    assert_enqueued_with(job: NotifyNdaFailedJob, args: [ users(:one).id ]) do
-      post :create, params: {
-        accepted: "1",
-        identity_video: fixture_file_upload("pledge.webm", "video/webm"),
-        signed_name: "Ada Lovelace",
-        user: SIGNING_DETAILS
-      }
-    end
-
-    assert_response :unprocessable_entity
-    assert_select "[data-wizard][data-initial-step='2']"
-    assert_select "input[name='user[address_line_1]'][value='15 Falls Rd']"
-    assert_select "input[name='signed_name'][value='Ada Lovelace']"
-    assert_select "select[name='user[country]'] option[selected][value='United States']"
-    assert_select ".flash-alert", text: "No speech detected."
-  ensure
-    ENV["SLACK_BOT_TOKEN"] = previous_token
-    singleton&.define_method(:verify!, original) if original
-  end
-
-  test "saves the video and submission when the pledge content does not match" do
-    singleton = PledgeValidator.singleton_class
-    original = singleton.instance_method(:verify!)
-    result = PledgeValidator::Result.new(transcript: "Most of the pledge", score: 0.64)
-    singleton.define_method(:verify!) do |*, **|
-      raise PledgeValidator::Rejected.new("The pledge could not be verified (64% matched).", result:)
-    end
-
-    assert_difference("NdaSignature.count") do
+  test "saves the upload and queues verification without waiting for transcription" do
+    assert_enqueued_with(job: VerifyNdaSignatureJob) do
       post :create, params: {
         accepted: "1",
         identity_video: fixture_file_upload("pledge.webm", "video/webm"),
@@ -151,12 +117,9 @@ class NdaSignaturesControllerRetryTest < ActionController::TestCase
 
     assert_redirected_to nda_signature_path
     signature = users(:one).signature_for_current_version
-    assert_predicate signature, :rejected?
+    assert_predicate signature, :processing?
     assert_predicate signature.identity_video, :attached?
-    assert_equal "Most of the pledge", signature.transcript
-    assert_equal BigDecimal("0.64"), signature.validation_score
-  ensure
-    singleton&.define_method(:verify!, original) if original
+    assert_nil signature.transcript
   end
 
   test "lets the signer discard a saved recording and retry" do
@@ -178,81 +141,67 @@ class NdaSignaturesControllerSuccessTest < ActionController::TestCase
     session[:user_id] = users(:one).id
   end
 
-  test "queues a Slack notification after a valid signature when Slack is configured" do
+  test "does not clear the current NDA request until verification succeeds" do
     users(:one).update!(current_nda_required_at: Time.current)
-    validator = PledgeValidator.singleton_class
-    original = validator.instance_method(:verify!)
-    validator.define_method(:verify!) do |*, **|
-      PledgeValidator::Result.new(transcript: "I pledge.", score: 1.0)
-    end
-    previous_token = ENV["SLACK_BOT_TOKEN"]
-    ENV["SLACK_BOT_TOKEN"] = "test-token"
-
-    assert_enqueued_with(job: NotifyNdaSignedJob) do
-      perform_enqueued_jobs(only: SignatureCompletedJob) do
-        post :create, params: {
-          accepted: "1",
-          identity_video: fixture_file_upload("pledge.webm", "video/webm"),
-          signed_name: "Ada Lovelace",
-          user: SIGNING_DETAILS
-        }
-      end
-    end
+    post :create, params: {
+      accepted: "1",
+      identity_video: fixture_file_upload("pledge.webm", "video/webm"),
+      signed_name: "Ada Lovelace",
+      user: SIGNING_DETAILS
+    }
 
     assert_redirected_to nda_signature_path
-    assert_nil users(:one).reload.current_nda_required_at
-  ensure
-    ENV["SLACK_BOT_TOKEN"] = previous_token
-    validator&.define_method(:verify!, original) if original
+    assert users(:one).reload.current_nda_required_at?
+  end
+
+  test "shows a background processing receipt" do
+    signature = create_signature(users(:one), signed_at: Time.current)
+    signature.update!(verification_state: "processing", transcript: nil)
+
+    get :show
+
+    assert_select "[data-signature-processing]"
+    assert_select "h1", "We got your video!"
+    assert_select ".receipt", /close this page/
   end
 end
 
 class NdaSignaturesControllerMinorTest < ActionController::TestCase
+  include ActiveJob::TestHelper
+
   tests NdaSignaturesController
 
   MINOR_DETAILS = SIGNING_DETAILS.merge(birthdate: Date.new(2011, 3, 4)).freeze
 
-  setup do
-    session[:user_id] = users(:one).id
-    @validator = PledgeValidator.singleton_class
-    @original = @validator.instance_method(:verify!)
-    @validator.define_method(:verify!) do |*, **|
-      PledgeValidator::Result.new(transcript: "I pledge.", score: 1.0)
-    end
-  end
+  setup { session[:user_id] = users(:one).id }
 
-  teardown { @validator.define_method(:verify!, @original) }
-
-  def sign_as_minor
-    with_stubbed_mail do
-      post :create, params: {
-        accepted: "1",
-        identity_video: fixture_file_upload("pledge.webm", "video/webm"),
-        signed_name: "Ada Lovelace",
-        cosigner_name: "Byron Lovelace",
-        cosigner_email: "parent@example.com",
-        user: MINOR_DETAILS
-      }
-    end
+  def submit_as_minor
+    post :create, params: {
+      accepted: "1",
+      identity_video: fixture_file_upload("pledge.webm", "video/webm"),
+      signed_name: "Ada Lovelace",
+      cosigner_name: "Byron Lovelace",
+      cosigner_email: "parent@example.com",
+      user: MINOR_DETAILS
+    }
     users(:one).signature_for_current_version
   end
 
-  test "a minor's signature waits for the guardian and emails them a link" do
-    signature = sign_as_minor
-
-    assert_predicate signature, :awaiting_cosigner?
-    assert_nil users(:one).reload.reportable_nda_signature
-    assert_equal [ "parent@example.com" ], sent_mail_for(:cosign_request).map { _1[:to] }
+  test "a minor's submission waits for background verification before inviting the guardian" do
+    assert_no_enqueued_jobs(only: SendEmailJob) do
+      signature = submit_as_minor
+      assert_predicate signature, :processing?
+    end
   end
 
   test "nothing is announced or pushed to Airtable while consent is outstanding" do
     assert_no_enqueued_jobs(only: [ SignatureCompletedJob, NotifyNdaSignedJob, SyncSignatureToAirtableJob ]) do
-      sign_as_minor
+      submit_as_minor
     end
   end
 
   test "the agreement is not downloadable until the guardian has signed" do
-    sign_as_minor
+    submit_as_minor
     @request.env.delete("CONTENT_TYPE")
 
     get :show, format: :pdf
@@ -260,7 +209,10 @@ class NdaSignaturesControllerMinorTest < ActionController::TestCase
   end
 
   test "a resend issues a fresh link but not a flood of them" do
-    signature = sign_as_minor
+    signature = submit_as_minor
+    signature.user.reload
+    signature.update!(verification_state: "awaiting_cosigner", transcript: "I pledge.")
+    with_stubbed_mail { Cosignature.invite!(signature) }
     first = signature.cosigner_token_digest
 
     with_stubbed_mail { post :resend_cosigner_invite }

@@ -23,33 +23,16 @@ class NdaSignaturesController < ApplicationController
     raise ActiveRecord::RecordInvalid, current_user unless current_user.valid?
 
     video = params.require(:identity_video)
-    result = PledgeValidator.verify!(video, user: current_user)
-    signature = build_signature(video, result)
-    signature.verification_state = "awaiting_cosigner" if signature.requires_cosignature?
+    signature = build_signature(video)
+    signature.verification_state = "processing"
     current_user.transaction do
-      current_user.current_nda_required_at = nil
       current_user.save!
       signature.save!
     end
-    if signature.awaiting_cosigner?
-      Cosignature.invite!(signature)
-      return redirect_to nda_signature_path,
-        notice: "Almost there! We've emailed #{signature.cosigner_email} a link for your parent or guardian to sign."
-    end
-
-    SignatureCompletedJob.perform_later(signature.id)
-    redirect_to nda_signature_path, notice: "NDA signed on #{signature.signed_at.to_date.to_fs(:long)}."
-  rescue PledgeValidator::Rejected => error
-    return save_rejected_attempt(video, error) if error.result
-
-    enqueue_failure_notification
-    render_video_retry(error.message)
-  rescue PledgeValidator::Error => error
-    Rails.logger.warn("xAI transcription failed: #{error.message}")
-    enqueue_failure_notification
-    render_video_retry("We couldn't validate the video right now. Please upload it again.")
+    VerifyNdaSignatureJob.perform_later(signature.id)
+    redirect_to nda_signature_path,
+      notice: "We got your video. You can close this page—we'll let you know when it has been processed."
   rescue ActiveRecord::RecordInvalid => error
-    enqueue_failure_notification
     redirect_to nda_signature_path, alert: error.record.errors.full_messages.to_sentence
   end
 
@@ -75,18 +58,7 @@ class NdaSignaturesController < ApplicationController
 
   private
 
-  def save_rejected_attempt(video, error)
-    signature = build_signature(video, error.result)
-    signature.verification_state = "rejected"
-    current_user.transaction do
-      current_user.save!
-      signature.save!
-    end
-    enqueue_failure_notification
-    redirect_to nda_signature_path, alert: "#{error.message} Your recording was saved."
-  end
-
-  def build_signature(video, result)
+  def build_signature(video)
     current_user.nda_signatures.build(
       document_version: NdaDocument::VERSION,
       document_sha256: NdaDocument.sha256,
@@ -94,8 +66,6 @@ class NdaSignaturesController < ApplicationController
       signed_at: Time.current,
       ip_address: request.remote_ip,
       user_agent: request.user_agent,
-      transcript: result.transcript,
-      validation_score: result.score,
       cosigner_name: params[:cosigner_name],
       cosigner_email: params[:cosigner_email]
     ).tap { _1.identity_video.attach(video) }
@@ -106,19 +76,6 @@ class NdaSignaturesController < ApplicationController
 
     send_data NdaPdf.call(@signature), filename: NdaPdf.filename(@signature),
       type: "application/pdf", disposition: "attachment"
-  end
-
-  def enqueue_failure_notification
-    NotifyNdaFailedJob.perform_later(current_user.id) if SlackClient.configured?
-  end
-
-  def render_video_retry(message)
-    @retry_video = true
-    @signed_name = params[:signed_name]
-    @cosigner_name = params[:cosigner_name]
-    @cosigner_email = params[:cosigner_email]
-    flash.now.alert = message
-    render :show, status: :unprocessable_entity
   end
 
   def user_params
