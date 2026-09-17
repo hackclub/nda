@@ -131,6 +131,42 @@ class NdaSignaturesControllerRetryTest < ActionController::TestCase
     ENV["SLACK_BOT_TOKEN"] = previous_token
     singleton&.define_method(:verify!, original) if original
   end
+
+  test "saves the video and submission when the pledge content does not match" do
+    singleton = PledgeValidator.singleton_class
+    original = singleton.instance_method(:verify!)
+    result = PledgeValidator::Result.new(transcript: "Most of the pledge", score: 0.64)
+    singleton.define_method(:verify!) do |*, **|
+      raise PledgeValidator::Rejected.new("The pledge could not be verified (64% matched).", result:)
+    end
+
+    assert_difference("NdaSignature.count") do
+      post :create, params: {
+        accepted: "1",
+        identity_video: fixture_file_upload("pledge.webm", "video/webm"),
+        signed_name: "Ada Lovelace",
+        user: SIGNING_DETAILS
+      }
+    end
+
+    assert_redirected_to nda_signature_path
+    signature = users(:one).signature_for_current_version
+    assert_predicate signature, :rejected?
+    assert_predicate signature.identity_video, :attached?
+    assert_equal "Most of the pledge", signature.transcript
+    assert_equal BigDecimal("0.64"), signature.validation_score
+  ensure
+    singleton&.define_method(:verify!, original) if original
+  end
+
+  test "lets the signer discard a saved recording and retry" do
+    signature = create_signature(users(:one), signed_at: Time.current)
+    signature.update!(verification_state: "rejected")
+
+    assert_difference("NdaSignature.count", -1) { delete :retry }
+
+    assert_redirected_to nda_signature_path
+  end
 end
 
 class NdaSignaturesControllerSuccessTest < ActionController::TestCase

@@ -1,6 +1,21 @@
 require "test_helper"
 
 class NdaSignatureTest < ActiveSupport::TestCase
+  test "a rejected native attempt can retain a video when no audio was detected" do
+    user = users(:one)
+    user.update!(SIGNING_DETAILS)
+    signature = user.nda_signatures.build(
+      document_version: NdaDocument::VERSION, document_sha256: NdaDocument.sha256,
+      signed_name: "Ada Lovelace", signed_at: Time.current, transcript: nil,
+      validation_score: 0, verification_state: "rejected"
+    )
+    signature.identity_video.attach(
+      io: file_fixture("pledge.webm").open, filename: "pledge.webm", content_type: "video/webm"
+    )
+
+    assert_predicate signature, :valid?
+  end
+
   test "a video deleted by hand leaves the signature valid" do
     signature = create_signature(users(:one), signed_at: 8.days.ago)
 

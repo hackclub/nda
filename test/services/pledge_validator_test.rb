@@ -38,9 +38,11 @@ class PledgeValidatorTest < ActiveSupport::TestCase
 
   test "rejects a transcript missing the pledge" do
     with_transcript("Hello, this is a video.") do
-      assert_raises(PledgeValidator::Rejected) do
+      error = assert_raises(PledgeValidator::Rejected) do
         PledgeValidator.verify!(@video, user: @user)
       end
+      assert_equal "Hello, this is a video.", error.result.transcript
+      assert_operator error.result.score, :<, PledgeValidator::TOKEN_OVERLAP
     end
   end
 
@@ -50,6 +52,7 @@ class PledgeValidatorTest < ActiveSupport::TestCase
         PledgeValidator.verify!(@video, user: @user)
       end
       assert_match "couldn't detect any spoken audio", error.message
+      assert_equal 0.0, error.result.score
     end
   end
 

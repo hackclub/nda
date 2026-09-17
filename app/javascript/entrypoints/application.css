@@ -146,6 +146,10 @@ blockquote li + li { margin-top: 10px; }
 .recorder-note a { color: var(--ink); font-weight: 700; }
 .validation-note { margin-top: 16px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .validation-note span { margin-right: 6px; color: var(--red); }
+.admin-override { margin: 24px 0; padding: 18px 20px; border: 1px solid #d6a72c; border-radius: 8px; background: #fff8df; }
+.admin-override label { margin-bottom: 14px; }
+.admin-override label:last-of-type { margin-bottom: 0; }
+.admin-override p { margin: 10px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 
 .contract { max-height: 480px; margin: 24px 0 30px; padding: 30px; overflow: auto; border: 1px solid var(--line); background: white; color: #343640; font-family: Georgia, "Times New Roman", Times, serif; line-height: 1.6; }
 .contract h2 { text-align: center; text-transform: uppercase; font-size: 20px; }
@@ -240,6 +244,7 @@ blockquote li + li { margin-top: 10px; }
   .minimal-home-api { color: var(--muted); }
   .http-method { background: #183a30; color: #8fe3c1; }
   .docs-endpoint p code, .docs-section p code { background: #2d2b32; }
+  .admin-override { border-color: #6f5a24; background: #332d1d; }
 }
 
 @media (max-width: 760px) {

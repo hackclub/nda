@@ -30,7 +30,7 @@ visit `http://localhost:3000`. anylocal uploads are stored in the `uploads` dock
 
 ## admin
 
-u can set `ADMIN_SLACK_IDS` to a comma-separated list of Slack IDs to seed them. the dash at `/admin` shows fun tools for you to keep the system running smoothly
+u can set `ADMIN_SLACK_IDS` to a comma-separated list of Slack IDs to seed them. the dash at `/admin` shows fun tools for you to keep the system running smoothly. pledge recordings that fail the content check are saved as rejected attempts; admins can review and force approve an attempt with an audit reason, or the signer can discard it and retry
 
 ## public api
 

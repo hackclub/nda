@@ -24,19 +24,7 @@ class NdaSignaturesController < ApplicationController
 
     video = params.require(:identity_video)
     result = PledgeValidator.verify!(video, user: current_user)
-    signature = current_user.nda_signatures.build(
-      document_version: NdaDocument::VERSION,
-      document_sha256: NdaDocument.sha256,
-      signed_name: params.require(:signed_name).strip,
-      signed_at: Time.current,
-      ip_address: request.remote_ip,
-      user_agent: request.user_agent,
-      transcript: result.transcript,
-      validation_score: result.score,
-      cosigner_name: params[:cosigner_name],
-      cosigner_email: params[:cosigner_email]
-    )
-    signature.identity_video.attach(video)
+    signature = build_signature(video, result)
     signature.verification_state = "awaiting_cosigner" if signature.requires_cosignature?
     current_user.transaction do
       current_user.current_nda_required_at = nil
@@ -52,6 +40,8 @@ class NdaSignaturesController < ApplicationController
     SignatureCompletedJob.perform_later(signature.id)
     redirect_to nda_signature_path, notice: "NDA signed on #{signature.signed_at.to_date.to_fs(:long)}."
   rescue PledgeValidator::Rejected => error
+    return save_rejected_attempt(video, error) if error.result
+
     enqueue_failure_notification
     render_video_retry(error.message)
   rescue PledgeValidator::Error => error
@@ -73,7 +63,43 @@ class NdaSignaturesController < ApplicationController
     redirect_to nda_signature_path, notice: "Sent a fresh link to #{signature.cosigner_email}."
   end
 
+  def retry
+    signature = current_user.signature_for_current_version
+    unless signature&.native? && signature.rejected?
+      return redirect_to nda_signature_path
+    end
+
+    signature.destroy!
+    redirect_to nda_signature_path, notice: "Your saved recording was removed. You can try again now."
+  end
+
   private
+
+  def save_rejected_attempt(video, error)
+    signature = build_signature(video, error.result)
+    signature.verification_state = "rejected"
+    current_user.transaction do
+      current_user.save!
+      signature.save!
+    end
+    enqueue_failure_notification
+    redirect_to nda_signature_path, alert: "#{error.message} Your recording was saved."
+  end
+
+  def build_signature(video, result)
+    current_user.nda_signatures.build(
+      document_version: NdaDocument::VERSION,
+      document_sha256: NdaDocument.sha256,
+      signed_name: params.require(:signed_name).strip,
+      signed_at: Time.current,
+      ip_address: request.remote_ip,
+      user_agent: request.user_agent,
+      transcript: result.transcript,
+      validation_score: result.score,
+      cosigner_name: params[:cosigner_name],
+      cosigner_email: params[:cosigner_email]
+    ).tap { _1.identity_video.attach(video) }
+  end
 
   def send_agreement
     return redirect_to nda_signature_path unless @signature&.approved?

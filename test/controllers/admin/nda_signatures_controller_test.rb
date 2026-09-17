@@ -36,6 +36,33 @@ class Admin::NdaSignaturesControllerTest < ActionController::TestCase
     assert_predicate signature.reload, :awaiting_cosigner?
   end
 
+  test "force approves a saved native recording and records the override" do
+    signature = create_signature(users(:one), signed_at: Time.current)
+    signature.update!(verification_state: "rejected", validation_score: 0.64)
+
+    assert_enqueued_with(job: SignatureCompletedJob, args: [ signature.id ]) do
+      patch :update, params: { id: signature.id, reason: "Reviewed the saved recording" }
+    end
+
+    assert_predicate signature.reload, :approved?
+    assert_equal @admin, signature.reviewed_by
+    action = AdminAction.last
+    assert_equal "force_sign", action.action
+    assert_equal "0.64", action.details["validation_score"]
+  end
+
+  test "does not approve a saved native recording with no detected audio" do
+    signature = create_signature(users(:one), signed_at: Time.current)
+    signature.update!(verification_state: "rejected", transcript: nil, validation_score: 0)
+
+    assert_no_difference("AdminAction.count") do
+      patch :update, params: { id: signature.id, reason: "Cannot hear it" }
+    end
+
+    assert_predicate signature.reload, :rejected?
+    assert_match(/no detected audio/i, flash[:alert])
+  end
+
   test "requires a reason before destroying a signature" do
     signature = create_legacy_signature(users(:one))
 

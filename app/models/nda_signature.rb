@@ -22,11 +22,11 @@ class NdaSignature < ApplicationRecord
   validates :cosigner_signed_name, length: { maximum: 200 }, allow_nil: true
 
   with_options if: :native? do
-    validates :transcript, presence: true
     validate :acceptable_identity_video
     validate :cosigner_present_for_minor
     validate :signed_name_matches_recipient
   end
+  validates :transcript, presence: true, if: -> { native? && !rejected? }
 
   with_options if: -> { legacy? && !rejected? && !legacy_source_airtable? } do
     validates :legacy_signing_certificate_fingerprint, presence: true

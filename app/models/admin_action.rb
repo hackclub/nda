@@ -1,5 +1,5 @@
 class AdminAction < ApplicationRecord
-  ACTIONS = %w[force_approve revoke reset_nda require_current_nda destroy_signature sync_airtable].freeze
+  ACTIONS = %w[force_approve force_sign revoke reset_nda require_current_nda destroy_signature sync_airtable].freeze
 
   belongs_to :admin_user, class_name: "User"
   belongs_to :target_user, class_name: "User"

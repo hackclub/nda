@@ -3,6 +3,8 @@ class Admin::NdaSignaturesController < ApplicationController
   before_action :set_signature
 
   def update
+    return approve_rejected_native if @signature.native?
+
     return redirect_to admin_root_path, alert: "Only legacy signatures can be force approved." unless @signature.legacy?
     return redirect_to admin_root_path, alert: "This signature is already approved." if @signature.approved?
     return redirect_to admin_root_path, alert: "A revoked signature cannot be force approved." if @signature.rejected?
@@ -40,6 +42,30 @@ class Admin::NdaSignaturesController < ApplicationController
   end
 
   private
+
+  def approve_rejected_native
+    unless @signature.rejected?
+      return redirect_to admin_root_path, alert: "Only a rejected native recording can be force approved."
+    end
+    if @signature.transcript.blank?
+      return redirect_to admin_root_path, alert: "A recording with no detected audio cannot be force approved."
+    end
+    return redirect_to admin_root_path, alert: "A reason is required." if reason.blank?
+
+    awaiting_cosigner = @signature.requires_cosignature?
+    @signature.transaction do
+      @signature.update!(verification_state: awaiting_cosigner ? "awaiting_cosigner" : "approved",
+        reviewed_by: current_user, reviewed_at: Time.current, review_note: reason)
+      @signature.user.update!(current_nda_required_at: nil)
+      audit!("force_sign", details: { "validation_score" => @signature.validation_score.to_s })
+    end
+    if awaiting_cosigner
+      Cosignature.invite!(@signature)
+    else
+      SignatureCompletedJob.perform_later(@signature.id)
+    end
+    redirect_to admin_root_path, notice: "Approved #{@signature.user.slack_id}'s saved NDA recording."
+  end
 
   def set_signature
     @signature = NdaSignature.includes(:user, :legacy_nda_import).find(params[:id])

@@ -78,7 +78,12 @@
                           <%= form.submit "Move to current NDA", class: "menu-button" %>
                         <% end %>
                       <% end %>
-                      <% if displayed&.approved? %>
+                      <% if displayed&.native? && displayed.rejected? && displayed.transcript.present? %>
+                        <%= form_with url: admin_nda_signature_path(displayed), method: :patch, data: { confirm: "Force approve this saved recording?" } do |form| %>
+                          <%= form.text_field :reason, required: true, placeholder: "Approval reason" %>
+                          <%= form.submit "Force approve recording", class: "menu-button" %>
+                        <% end %>
+                      <% elsif displayed&.approved? %>
                         <%= button_to "Sync to Airtable", sync_admin_nda_signature_path(displayed), method: :post, class: "menu-button" %>
                       <% elsif displayed&.legacy? %>
                         <%= form_with url: admin_nda_signature_path(displayed), method: :patch, data: { confirm: "Force approve this legacy NDA?" } do |form| %>

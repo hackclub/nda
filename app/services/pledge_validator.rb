@@ -11,13 +11,25 @@ class PledgeValidator
   ].freeze
 
   class Error < StandardError; end
-  class Rejected < Error; end
+  class Rejected < Error
+    attr_reader :result
+
+    def initialize(message, result: nil)
+      @result = result
+      super(message)
+    end
+  end
 
   def self.verify!(video, user:)
     validate_upload!(video)
     transcript = XaiTranscription.call(video)
     actual = tokens(transcript)
-    raise Rejected, "We couldn't detect any spoken audio. Check your microphone and upload a new video." if actual.empty?
+    if actual.empty?
+      raise Rejected.new(
+        "We couldn't detect any spoken audio. Check your microphone and upload a new video.",
+        result: Result.new(transcript:, score: 0.0)
+      )
+    end
 
     expected = tokens(PledgeScript.for(user))
     score = (expected & actual).length.fdiv(expected.length)
@@ -26,11 +38,15 @@ class PledgeValidator
       (words & actual).length.fdiv(words.length) >= CONCEPT_OVERLAP
     end
 
+    result = Result.new(transcript:, score:)
     unless score >= TOKEN_OVERLAP && concepts_present
-      raise Rejected, "The pledge could not be verified (#{(score * 100).round}% matched). Please record it again and read every bullet clearly."
+      raise Rejected.new(
+        "The pledge could not be verified (#{(score * 100).round}% matched). Please record it again and read every bullet clearly.",
+        result:
+      )
     end
 
-    Result.new(transcript:, score:)
+    result
   rescue XaiTranscription::Error => error
     raise Error, error.message
   end

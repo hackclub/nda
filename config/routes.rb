@@ -7,6 +7,7 @@ Rails.application.routes.draw do
 
   resource :nda_signature, only: %i[show create] do
     post :resend_cosigner_invite
+    delete :retry
   end
   resource :legacy_nda_import, only: %i[show create] do
     post :challenge
