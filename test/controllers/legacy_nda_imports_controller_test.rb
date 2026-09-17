@@ -90,6 +90,16 @@ class LegacyNdaImportsControllerTest < ActionController::TestCase
     assert_select "[data-import-pending]"
   end
 
+  test "offers an approved legacy holder an explicit path to sign the new version" do
+    signature = create_legacy_signature(users(:one))
+    users(:one).legacy_nda_imports.create!(state: "approved", nda_signature: signature)
+
+    get :show
+
+    assert_select "h1", "Your old NDA is on file!"
+    assert_select "a[href=?]", nda_signature_path(sign_new: 1), text: "Sign the new NDA"
+  end
+
   test "offers the records check alongside the upload form" do
     get :show
 

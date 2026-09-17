@@ -28,12 +28,22 @@
       <button type="button" class="button button-dark" data-print>Print agreement</button></p>
     <%= render "document", css: "print-contract", signature: @signature %>
   </section>
+<% elsif @covered_by && !@sign_new %>
+  <% content_for :title, "Hack Club Contributor NDA" %>
+  <section class="shell receipt">
+    <div class="success-mark">✓</div><h1>Your NDA is signed!</h1>
+    <p>Others can verify your signature using your Slack ID: <strong><%= current_user.slack_id %></strong>.</p>
+    <dl>
+      <div><dt>Signed by</dt><dd><%= @covered_by.signed_name %></dd></div>
+      <div><dt>Signed at</dt><dd><time datetime="<%= @covered_by.signed_at.iso8601 %>" data-local-time><%= @covered_by.signed_at.to_fs(:long) %></time></dd></div>
+      <div><dt>Document version</dt><dd><%= @covered_by.document_version %></dd></div>
+      <div><dt>Source</dt><dd>Imported from the old signing system</dd></div>
+    </dl>
+    <p>Did someone tell you to sign the new NDA? You can do so here:
+      <%= link_to "Sign the new NDA", nda_signature_path(sign_new: 1) %>.</p>
+  </section>
 <% else %>
   <% content_for :title, "Sign the Hack Club NDA" %>
-  <% if @covered_by %>
-    <p class="flash flash-notice">You already have an NDA on file from our old signing system.
-      <%= link_to "View it", legacy_nda_import_path %>. You only need to sign again if you really want to be on the new version.</p>
-  <% end %>
   <section class="form-shell" data-wizard data-initial-step="<%= @retry_video ? 2 : 1 %>">
     <div class="progress"><div class="progress-step active"><b>1</b><span>Your details</span></div><i></i><div class="progress-step"><b>2</b><span>Video pledge</span></div><i></i><div class="progress-step"><b>3</b><span>Sign contract</span></div></div>
     <%= form_with url: nda_signature_path, multipart: true, class: "wizard-form", data: { wizard_form: true } do |form| %>
@@ -66,6 +76,8 @@
         <div class="button-row"><button type="button" class="button button-secondary" data-back>Back</button><%= form.submit "Validate video & sign", class: "button button-primary", data: { submit_label: true } %></div>
       </section>
     <% end %>
-    <p class="secondary-path">Already signed the Hack Club NDA through the old form? You can <%= link_to "Import your existing NDA", legacy_nda_import_path %> instead.</p>
+    <% unless @covered_by %>
+      <p class="secondary-path">Already signed the Hack Club NDA through the old form? You can <%= link_to "Import your existing NDA", legacy_nda_import_path %> instead.</p>
+    <% end %>
   </section>
 <% end %>

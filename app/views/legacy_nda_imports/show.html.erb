@@ -10,6 +10,8 @@
       <div><dt>Document version</dt><dd><%= @import.nda_signature.document_version %></dd></div>
       <div><dt>Source</dt><dd>Imported from the old signing system</dd></div>
     </dl>
+    <p>Did someone tell you to sign the new NDA? You can do so here:
+      <%= link_to "Sign the new NDA", nda_signature_path(sign_new: 1) %>.</p>
 
   <% elsif @import&.needs_review? %>
     <h1>We're taking a closer look</h1>

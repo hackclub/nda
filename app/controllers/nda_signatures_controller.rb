@@ -4,6 +4,7 @@ class NdaSignaturesController < ApplicationController
   def show
     @signature = current_user.signature_for_current_version
     @covered_by = current_user.reportable_nda_signature if @signature.nil?
+    @sign_new = params[:sign_new] == "1"
     respond_to do |format|
       format.html
       format.pdf { send_agreement }

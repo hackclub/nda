@@ -38,13 +38,24 @@ class NdaSignaturesControllerPdfTest < ActionController::TestCase
     assert_select "a[href=?]", nda_signature_path(format: :pdf)
   end
 
-  test "tells a legacy holder they are already covered instead of nothing" do
+  test "shows a legacy holder the signed receipt instead of the signing form" do
     create_legacy_signature(users(:one))
 
     get :show
 
-    assert_select "p.flash-notice", /already have an NDA on file/i
-    assert_select "a[href=?]", legacy_nda_import_path
+    assert_select "h1", "Your NDA is signed!"
+    assert_select ".receipt", /Imported from the old signing system/
+    assert_select "[data-wizard]", count: 0
+    assert_select "a[href=?]", nda_signature_path(sign_new: 1), text: "Sign the new NDA"
+  end
+
+  test "lets a legacy holder deliberately open the new signing form" do
+    create_legacy_signature(users(:one))
+
+    get :show, params: { sign_new: "1" }
+
+    assert_select "[data-wizard]"
+    assert_select ".receipt", count: 0
   end
 end
 
