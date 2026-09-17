@@ -11,9 +11,16 @@ module LegacyNda
       end
 
       def check_on_sign_in(user, ip: nil)
-        return nil if user.airtable_checked_at? || user.email.blank? || user.reportable_nda_signature
+        return nil if user.email.blank? || user.reportable_nda_signature
 
-        record = AirtableRecord.signed_for(user.email)
+        cached = AirtableNdaRecord.signed_for(user.email)
+        if user.airtable_checked_at?
+          return nil if cached.nil? || taken?(cached)
+
+          return settle!(user.legacy_nda_imports.create!(source: "airtable", ip_address: ip), cached)
+        end
+
+        record = cached || AirtableRecord.signed_for(user.email)
         user.update!(airtable_checked_at: Time.current)
         return nil if record.nil? || taken?(record)
 

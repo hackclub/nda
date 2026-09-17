@@ -12,6 +12,8 @@ class LegacyNda::AirtableImportTest < ActiveSupport::TestCase
   setup do
     @user = users(:one)
     @user.update!(email: "ada@example.com")
+    AirtableNdaRecord.delete_all
+    AirtableNdaBackfill.delete_all
   end
 
   def import_for(user = @user) = user.legacy_nda_imports.create!(source: "airtable", ip_address: "192.0.2.1")
@@ -116,5 +118,28 @@ class LegacyNda::AirtableImportTest < ActiveSupport::TestCase
 
     assert_predicate import.reload, :email_pending?
     assert_empty NdaSignature.all
+  end
+
+  test "uses a backfilled record without querying Airtable" do
+    record = LegacyNda::AirtableRecord::Found.new(
+      id: "recSigned", email: "Ada@Example.com", name: "Ada Lovelace",
+      signed_at: Time.utc(2025, 6, 1, 10), document_url: nil, document_filename: nil, document_bytes: nil
+    )
+    AirtableNdaRecord.replace_from_airtable!([ record ])
+    import = import_for
+
+    LegacyNda::AirtableImport.claim!(import)
+
+    assert_predicate import.reload, :approved?
+    assert_equal "recSigned", import.nda_signature.airtable_record_id
+  end
+
+  test "a completed backfill makes a missing email a local negative lookup" do
+    AirtableNdaRecord.replace_from_airtable!([])
+    import = import_for
+
+    LegacyNda::AirtableImport.claim!(import)
+
+    assert_predicate import.reload, :email_pending?
   end
 end

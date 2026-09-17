@@ -12,12 +12,20 @@ module LegacyNda
         address = email.to_s.strip.downcase
         return nil if address.blank?
 
+        cached = AirtableNdaRecord.signed_for(address)
+        return cached if cached
+        return nil if AirtableNdaRecord.backfill_complete?
+
         rows = AirtableClient.records(
           filter: "AND({Signed?}, LOWER({Email}) = #{AirtableClient.quote(address)})",
           fields: FIELDS,
           max_records: 10
         )
         rows.filter_map { |row| build(row) }.min_by(&:signed_at)
+      end
+
+      def all_signed
+        AirtableClient.all_records(filter: "{Signed?}", fields: FIELDS).filter_map { |row| build(row) }
       end
 
       def find(record_id) = build(AirtableClient.record(record_id))

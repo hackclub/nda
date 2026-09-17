@@ -1,0 +1,2 @@
+class AirtableNdaBackfill < ApplicationRecord
+end

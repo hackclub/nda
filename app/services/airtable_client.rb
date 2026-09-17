@@ -20,6 +20,21 @@ class AirtableClient
       get("#{table_path}?#{URI.encode_www_form(query)}").fetch("records", [])
     end
 
+    def all_records(filter:, fields: nil)
+      Enumerator.new do |records|
+        offset = nil
+        loop do
+          query = [ [ "filterByFormula", filter ], [ "pageSize", 100 ] ]
+          query << [ "offset", offset ] if offset
+          query += Array(fields).map { |field| [ "fields[]", field ] }
+          page = get("#{table_path}?#{URI.encode_www_form(query)}")
+          page.fetch("records", []).each { |record| records << record }
+          offset = page["offset"]
+          break if offset.blank?
+        end
+      end
+    end
+
     def record(record_id) = get("#{table_path}/#{record_id}")
 
     def create(fields) = post(table_path, { fields: fields, typecast: true })

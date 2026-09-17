@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_17_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -56,6 +56,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
     t.index ["created_at"], name: "index_admin_actions_on_created_at"
     t.index ["subject_type", "subject_id"], name: "index_admin_actions_on_subject_type_and_subject_id"
     t.index ["target_user_id"], name: "index_admin_actions_on_target_user_id"
+  end
+
+  create_table "airtable_nda_backfills", force: :cascade do |t|
+    t.datetime "completed_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "airtable_nda_records", force: :cascade do |t|
+    t.string "airtable_record_id", null: false
+    t.datetime "created_at", null: false
+    t.string "email", null: false
+    t.string "normalized_email", null: false
+    t.datetime "signed_at", null: false
+    t.string "signer_name"
+    t.datetime "updated_at", null: false
+    t.index ["airtable_record_id"], name: "index_airtable_nda_records_on_airtable_record_id", unique: true
+    t.index ["normalized_email", "signed_at"], name: "index_airtable_nda_records_on_normalized_email_and_signed_at"
   end
 
   create_table "legacy_nda_imports", force: :cascade do |t|

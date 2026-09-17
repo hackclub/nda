@@ -37,6 +37,33 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_nil users(:one).reload.reportable_nda_signature
   end
 
+  test "a backfilled member is recognized locally without Airtable configuration" do
+    record = LegacyNda::AirtableRecord::Found.new(
+      id: "recSigned", email: "ada@example.com", name: "Ada Lovelace",
+      signed_at: Time.utc(2025, 6, 1, 10), document_url: nil, document_filename: nil, document_bytes: nil
+    )
+    AirtableNdaRecord.replace_from_airtable!([ record ])
+
+    with_auth { sign_in }
+
+    assert_redirected_to legacy_nda_import_path
+    assert_equal "recSigned", users(:one).reload.reportable_nda_signature.airtable_record_id
+  end
+
+  test "a backfill recognizes a member who had an earlier negative check" do
+    users(:one).update!(airtable_checked_at: 1.day.ago)
+    record = LegacyNda::AirtableRecord::Found.new(
+      id: "recSigned", email: "ada@example.com", name: "Ada Lovelace",
+      signed_at: Time.utc(2025, 6, 1, 10), document_url: nil, document_filename: nil, document_bytes: nil
+    )
+    AirtableNdaRecord.replace_from_airtable!([ record ])
+
+    with_auth { sign_in }
+
+    assert_redirected_to legacy_nda_import_path
+    assert_equal "recSigned", users(:one).reload.reportable_nda_signature.airtable_record_id
+  end
+
   test "the base is only asked about a member once" do
     with_auth do
       with_airtable(rows: []) { sign_in }

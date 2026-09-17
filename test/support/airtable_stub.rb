@@ -22,6 +22,10 @@ module AirtableStub
       matched.first(max_records)
     end
 
+    def all_records(filter:, fields: nil)
+      records(filter: filter, fields: fields, max_records: rows.size).each
+    end
+
     def record(record_id) = rows.find { _1["id"] == record_id } || raise(AirtableClient::Error, "no such record")
 
     def create(fields)
@@ -55,7 +59,7 @@ module AirtableStub
   def with_airtable(rows: [])
     fake = Fake.new(rows)
     singleton = AirtableClient.singleton_class
-    stubbed = %i[records record create update upload_attachment]
+    stubbed = %i[records all_records record create update upload_attachment]
     originals = (stubbed + [ :configured? ]).to_h { [ _1, singleton.instance_method(_1) ] }
     singleton.define_method(:configured?) { true }
     stubbed.each do |name|

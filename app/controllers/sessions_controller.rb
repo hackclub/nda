@@ -39,7 +39,7 @@ class SessionsController < ApplicationController
   private
 
   def check_existing_nda(user)
-    return nil unless AirtableClient.configured?
+    return nil unless AirtableNdaRecord.backfill_complete? || AirtableClient.configured?
 
     LegacyNda::AirtableImport.check_on_sign_in(user, ip: request.remote_ip)
   rescue AirtableClient::Error => error
