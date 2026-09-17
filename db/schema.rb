@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_15_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_17_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -40,6 +40,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_200000) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "admin_actions", force: :cascade do |t|
+    t.string "action", null: false
+    t.bigint "admin_user_id", null: false
+    t.datetime "created_at", null: false
+    t.jsonb "details", default: {}, null: false
+    t.text "reason"
+    t.bigint "subject_id", null: false
+    t.string "subject_type", null: false
+    t.bigint "target_user_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["admin_user_id"], name: "index_admin_actions_on_admin_user_id"
+    t.index ["created_at"], name: "index_admin_actions_on_created_at"
+    t.index ["subject_type", "subject_id"], name: "index_admin_actions_on_subject_type_and_subject_id"
+    t.index ["target_user_id"], name: "index_admin_actions_on_target_user_id"
   end
 
   create_table "legacy_nda_imports", force: :cascade do |t|
@@ -293,6 +309,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_200000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "admin_actions", "users", column: "admin_user_id"
+  add_foreign_key "admin_actions", "users", column: "target_user_id"
   add_foreign_key "legacy_nda_imports", "nda_signatures"
   add_foreign_key "legacy_nda_imports", "users"
   add_foreign_key "nda_signatures", "users"

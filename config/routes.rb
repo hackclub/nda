@@ -18,6 +18,13 @@ Rails.application.routes.draw do
   post "/cosign/:token", to: "cosignatures#create"
 
   namespace :admin do
+    root "dashboard#index"
+    resources :nda_signatures, only: %i[update destroy] do
+      post :sync, on: :member
+    end
+    resources :users, only: [] do
+      post :reset_nda, on: :member
+    end
     resources :legacy_nda_imports, only: %i[index update]
   end
 

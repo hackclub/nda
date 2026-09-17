@@ -3,6 +3,8 @@ class User < ApplicationRecord
 
   has_many :nda_signatures, dependent: :destroy
   has_many :legacy_nda_imports, dependent: :destroy
+  has_many :admin_actions, foreign_key: :admin_user_id, dependent: :restrict_with_exception,
+    inverse_of: :admin_user
 
   validates :hack_club_identity_id, presence: true, uniqueness: true
   validates :slack_id, presence: true, uniqueness: true, format: { with: SLACK_ID_FORMAT }

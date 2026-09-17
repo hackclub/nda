@@ -1,0 +1,45 @@
+require "test_helper"
+
+class Admin::DashboardControllerAccessTest < ActionDispatch::IntegrationTest
+  test "turns away anyone who is not signed in" do
+    get admin_root_url
+    assert_redirected_to root_url
+  end
+end
+
+class Admin::DashboardControllerTest < ActionController::TestCase
+  tests Admin::DashboardController
+
+  setup do
+    @admin = users(:two)
+    @admin.update!(admin: true)
+    session[:user_id] = @admin.id
+  end
+
+  test "turns away a signed in non-admin" do
+    session[:user_id] = users(:one).id
+    get :index
+    assert_redirected_to root_path
+  end
+
+  test "shows coverage systems and members" do
+    create_signature(users(:one), signed_at: Time.current)
+
+    get :index
+
+    assert_response :success
+    assert_select "h1", "NDA control room"
+    assert_select ".metric-grid"
+    assert_select ".system-card", 4
+    assert_select ".admin-table tbody tr", 2
+    assert_select "a.admin-link", "Admin"
+  end
+
+  test "filters members without treating search metacharacters as wildcards" do
+    get :index, params: { query: users(:one).slack_id }
+    assert_select ".admin-table tbody tr", 1
+
+    get :index, params: { query: "%" }
+    assert_select ".empty-cell", 1
+  end
+end

@@ -1,5 +1,6 @@
 <% content_for :title, "Legacy NDA review" %>
 <section class="shell review-queue">
+  <p><%= link_to "← Admin dashboard", admin_root_path %></p>
   <h1>Legacy NDA review</h1>
   <p class="lede">peoples ndas who didnt fit quite right</p>
 
@@ -36,7 +37,7 @@
       <% else %>purged<% end %></p>
 
       <%= form_with url: admin_legacy_nda_import_path(signature), method: :patch, class: "review-actions" do %>
-        <%= text_field_tag :note, nil, placeholder: "Note for the audit record" %>
+        <%= text_field_tag :note, nil, placeholder: "Reason for the audit record", required: true %>
         <%= submit_tag "Approve", name: "decision", value: "approve", class: "button button-primary" %>
         <%= submit_tag "Revoke", name: "decision", value: "revoke", class: "button button-secondary" %>
       <% end %>

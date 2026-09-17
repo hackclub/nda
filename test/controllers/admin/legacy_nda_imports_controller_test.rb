@@ -50,6 +50,7 @@ class Admin::LegacyNdaImportsControllerTest < ActionController::TestCase
     assert_equal "Checked with them on Slack", @signature.review_note
     assert_equal @signature, users(:one).reportable_nda_signature
     assert_predicate @import.reload, :approved?
+    assert_equal "force_approve", AdminAction.last.action
   end
 
   test "revoking releases the envelope so the rightful owner can claim it" do
@@ -64,6 +65,7 @@ class Admin::LegacyNdaImportsControllerTest < ActionController::TestCase
     assert_equal "Not their document", @signature.review_note
     assert_nil users(:one).reportable_nda_signature
     assert_predicate @import.reload, :rejected?
+    assert_equal "revoke", AdminAction.last.action
     assert_nothing_raised { create_legacy_signature(users(:two), legacy_envelope_id: envelope) }
   end
 
@@ -72,5 +74,14 @@ class Admin::LegacyNdaImportsControllerTest < ActionController::TestCase
 
     assert_predicate @signature.reload, :needs_review?
     assert_match(/approve or revoke/i, flash[:alert])
+  end
+
+  test "requires a reason for a review decision" do
+    assert_no_difference("AdminAction.count") do
+      patch :update, params: { id: @signature.id, decision: "approve" }
+    end
+
+    assert_predicate @signature.reload, :needs_review?
+    assert_match(/reason is required/i, flash[:alert])
   end
 end

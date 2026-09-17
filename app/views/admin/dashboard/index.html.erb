@@ -1,0 +1,116 @@
+<% content_for :title, "NDA admin" %>
+<% content_for :body_class, "admin-page" %>
+
+<section class="admin-shell">
+  <header class="admin-heading">
+    <div>
+      <span class="eyebrow">ADMIN</span>
+      <h1>NDA control room</h1>
+      <p>Current coverage, exceptions, integrations, and administrative controls.</p>
+    </div>
+    <%= link_to "Review legacy imports", admin_legacy_nda_imports_path, class: "button button-secondary" %>
+  </header>
+
+  <div class="metric-grid" aria-label="NDA totals">
+    <article><strong><%= @metrics[:current] %></strong><span>Current NDA</span></article>
+    <article><strong><%= @metrics[:current_pending] %></strong><span>Current pending</span></article>
+    <article><strong><%= @metrics[:legacy] %></strong><span>Legacy coverage</span></article>
+    <article><strong><%= @metrics[:review] %></strong><span>Needs review</span></article>
+    <article><strong><%= @metrics[:unsynced] %></strong><span>Awaiting Airtable</span></article>
+    <article><strong><%= @metrics[:members] %></strong><span>Members seen</span></article>
+  </div>
+
+  <section class="admin-section">
+    <div class="section-heading">
+      <div><h2>Systems</h2><p>Configuration and local service health. Airtable is contacted only when you run the live check.</p></div>
+      <%= link_to "Run live Airtable check", admin_root_path(check_airtable: 1), class: "button button-secondary" %>
+    </div>
+    <div class="system-grid">
+      <% @systems.each do |system| %>
+        <article class="system-card system-<%= system.state %>">
+          <span class="status-dot" aria-hidden="true"></span>
+          <div><strong><%= system.name %></strong><span><%= system.detail %></span></div>
+        </article>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="admin-section">
+    <div class="section-heading">
+      <div><h2>Members and NDAs</h2><p>Showing up to 100 recently updated members. Search by name, email, or Slack ID.</p></div>
+      <%= form_with url: admin_root_path, method: :get, class: "admin-search" do |form| %>
+        <%= form.search_field :query, value: params[:query], placeholder: "Search members", aria: { label: "Search members" } %>
+        <%= form.submit "Search", class: "button button-dark" %>
+      <% end %>
+    </div>
+
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Member</th><th>Coverage</th><th>Signed</th><th>Airtable</th><th><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody>
+          <% @users.each do |user| %>
+            <% current = user.nda_signatures.find { _1.document_version == NdaDocument::VERSION } %>
+            <% signature = current&.approved? ? current : user.nda_signatures.select(&:approved?).find(&:legacy?) %>
+            <% displayed = current || signature %>
+            <tr>
+              <td><strong><%= user.display_name %></strong><span><%= user.slack_id %> · <%= user.email.presence || "no email" %></span></td>
+              <td>
+                <% if current&.approved? %><span class="pill pill-current">Current</span>
+                <% elsif current %><span class="pill pill-warning"><%= current.verification_state.humanize %></span>
+                <% elsif signature %><span class="pill">Legacy</span>
+                <% else %><span class="pill pill-missing">Not signed</span><% end %>
+              </td>
+              <td><%= displayed&.signed_at ? tag.time(displayed.signed_at.to_date.to_fs(:medium), datetime: displayed.signed_at.iso8601, data: { local_time: true }) : "—" %></td>
+              <td>
+                <% if displayed&.airtable_synced_at? %><span class="sync-state">Synced</span><small><%= displayed.airtable_record_id %></small>
+                <% elsif displayed %><span class="sync-state sync-pending">Pending</span>
+                <% else %>—<% end %>
+              </td>
+              <td>
+                <% if displayed %>
+                  <details class="admin-actions-menu">
+                    <summary>Manage</summary>
+                    <div>
+                      <% if displayed.approved? %>
+                        <%= button_to "Sync to Airtable", sync_admin_nda_signature_path(displayed), method: :post, class: "menu-button" %>
+                      <% elsif displayed.legacy? %>
+                        <%= form_with url: admin_nda_signature_path(displayed), method: :patch, data: { confirm: "Force approve this legacy NDA?" } do |form| %>
+                          <%= form.text_field :reason, required: true, placeholder: "Approval reason" %>
+                          <%= form.submit "Force approve", class: "menu-button" %>
+                        <% end %>
+                      <% end %>
+                      <% if current %>
+                        <%= form_with url: reset_nda_admin_user_path(user), method: :post, data: { confirm: "Reset this current NDA? The member will be able to sign again." } do |form| %>
+                          <%= form.text_field :reason, required: true, placeholder: "Reset reason" %>
+                          <%= form.submit "Reset current NDA", class: "menu-button danger-text" %>
+                        <% end %>
+                      <% end %>
+                      <%= form_with url: admin_nda_signature_path(displayed), method: :delete, data: { confirm: "Permanently destroy this NDA and its linked import?" } do |form| %>
+                        <%= form.text_field :reason, required: true, placeholder: "Destruction reason" %>
+                        <%= form.submit "Destroy record", class: "menu-button danger-text" %>
+                      <% end %>
+                    </div>
+                  </details>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+          <% if @users.empty? %><tr><td colspan="5" class="empty-cell">No members match that search.</td></tr><% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="admin-section audit-section">
+    <div class="section-heading"><div><h2>Audit log</h2><p>Recent administrative decisions and destructive actions.</p></div></div>
+    <% if @recent_actions.any? %>
+      <ol class="audit-log">
+        <% @recent_actions.each do |action| %>
+          <li><span><strong><%= action.action.humanize %></strong> for <%= action.target_user.slack_id %> by <%= action.admin_user.display_name %></span><span><time datetime="<%= action.created_at.iso8601 %>" data-local-time><%= action.created_at.to_fs(:long) %></time><%= " · #{action.reason}" if action.reason.present? %></span></li>
+        <% end %>
+      </ol>
+    <% else %>
+      <p class="review-empty">No administrative actions yet.</p>
+    <% end %>
+  </section>
+</section>

@@ -9,10 +9,16 @@ class Admin::LegacyNdaImportsController < ApplicationController
 
   def update
     signature = NdaSignature.legacy.find(params[:id])
+    unless params[:decision].in?(%w[approve revoke])
+      return redirect_to admin_legacy_nda_imports_path, alert: "Choose approve or revoke."
+    end
+    if params[:note].blank?
+      return redirect_to admin_legacy_nda_imports_path, alert: "A reason is required."
+    end
+
     case params[:decision]
     when "approve" then approve!(signature)
     when "revoke" then revoke!(signature)
-    else return redirect_to admin_legacy_nda_imports_path, alert: "Choose approve or revoke."
     end
 
     redirect_to admin_legacy_nda_imports_path, notice: "Import #{signature.id} #{params[:decision]}d."
@@ -21,16 +27,24 @@ class Admin::LegacyNdaImportsController < ApplicationController
   private
 
   def approve!(signature)
-    signature.update!(verification_state: "approved", **review_attributes)
-    signature.legacy_nda_import&.update!(state: "approved")
+    signature.transaction do
+      signature.update!(verification_state: "approved", **review_attributes)
+      signature.legacy_nda_import&.update!(state: "approved")
+      AdminAction.record!(admin: current_user, target_user: signature.user, action: "force_approve",
+        subject: signature, reason: params[:note])
+    end
     SyncSignatureToAirtableJob.perform_later(signature.id) if AirtableClient.configured?
   end
 
   def revoke!(signature)
-    signature.update!(
-      verification_state: "rejected", legacy_envelope_id: nil, legacy_document_sha256: nil, **review_attributes
-    )
-    signature.legacy_nda_import&.update!(state: "rejected")
+    signature.transaction do
+      signature.update!(
+        verification_state: "rejected", legacy_envelope_id: nil, legacy_document_sha256: nil, **review_attributes
+      )
+      signature.legacy_nda_import&.update!(state: "rejected")
+      AdminAction.record!(admin: current_user, target_user: signature.user, action: "revoke",
+        subject: signature, reason: params[:note])
+    end
   end
 
   def review_attributes

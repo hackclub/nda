@@ -28,6 +28,10 @@ docker compose up --build
 
 visit `http://localhost:3000`. anylocal uploads are stored in the `uploads` docker volume.
 
+## admin
+
+u can set `ADMIN_SLACK_IDS` to a comma-separated list of Slack IDs to seed them. the dash at `/admin` shows fun tools for you to keep the system running smoothly
+
 ## public api
 
 you can pull someones nda status via this endpoint:
