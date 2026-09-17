@@ -4,7 +4,7 @@ class NdaSignaturesController < ApplicationController
   def show
     @signature = current_user.signature_for_current_version
     @covered_by = current_user.reportable_nda_signature if @signature.nil?
-    @sign_new = params[:sign_new] == "1"
+    @sign_new = params[:sign_new] == "1" || current_user.current_nda_required_at?
     respond_to do |format|
       format.html
       format.pdf { send_agreement }
@@ -39,6 +39,7 @@ class NdaSignaturesController < ApplicationController
     signature.identity_video.attach(video)
     signature.verification_state = "awaiting_cosigner" if signature.requires_cosignature?
     current_user.transaction do
+      current_user.current_nda_required_at = nil
       current_user.save!
       signature.save!
     end

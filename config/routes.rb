@@ -24,6 +24,7 @@ Rails.application.routes.draw do
     end
     resources :users, only: [] do
       post :reset_nda, on: :member
+      post :require_current_nda, on: :member
     end
     resources :legacy_nda_imports, only: %i[index update]
   end

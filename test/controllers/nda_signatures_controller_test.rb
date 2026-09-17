@@ -57,6 +57,17 @@ class NdaSignaturesControllerPdfTest < ActionController::TestCase
     assert_select "[data-wizard]"
     assert_select ".receipt", count: 0
   end
+
+  test "opens the new signing form when an admin has moved a legacy holder" do
+    user = users(:one)
+    create_legacy_signature(user)
+    user.update!(current_nda_required_at: Time.current)
+
+    get :show
+
+    assert_select "[data-wizard]"
+    assert_select ".receipt", count: 0
+  end
 end
 
 class NdaSignaturesControllerFormTest < ActionController::TestCase
@@ -132,6 +143,7 @@ class NdaSignaturesControllerSuccessTest < ActionController::TestCase
   end
 
   test "queues a Slack notification after a valid signature when Slack is configured" do
+    users(:one).update!(current_nda_required_at: Time.current)
     validator = PledgeValidator.singleton_class
     original = validator.instance_method(:verify!)
     validator.define_method(:verify!) do |*, **|
@@ -152,6 +164,7 @@ class NdaSignaturesControllerSuccessTest < ActionController::TestCase
     end
 
     assert_redirected_to nda_signature_path
+    assert_nil users(:one).reload.current_nda_required_at
   ensure
     ENV["SLACK_BOT_TOKEN"] = previous_token
     validator&.define_method(:verify!, original) if original

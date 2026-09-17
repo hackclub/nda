@@ -57,6 +57,7 @@
               <td>
                 <% if current&.approved? %><span class="pill pill-current">Current</span>
                 <% elsif current %><span class="pill pill-warning"><%= current.verification_state.humanize %></span>
+                <% elsif user.current_nda_required_at? %><span class="pill pill-warning">Current requested</span>
                 <% elsif signature %><span class="pill">Legacy</span>
                 <% else %><span class="pill pill-missing">Not signed</span><% end %>
               </td>
@@ -67,13 +68,19 @@
                 <% else %>—<% end %>
               </td>
               <td>
-                <% if displayed %>
+                <% if displayed || current.nil? %>
                   <details class="admin-actions-menu">
                     <summary>Manage</summary>
                     <div>
-                      <% if displayed.approved? %>
+                      <% if current.nil? && !user.current_nda_required_at? %>
+                        <%= form_with url: require_current_nda_admin_user_path(user), method: :post, data: { confirm: "Move this member to the current NDA flow? Their prior NDA will remain on file." } do |form| %>
+                          <%= form.text_field :reason, required: true, placeholder: "Reason for moving" %>
+                          <%= form.submit "Move to current NDA", class: "menu-button" %>
+                        <% end %>
+                      <% end %>
+                      <% if displayed&.approved? %>
                         <%= button_to "Sync to Airtable", sync_admin_nda_signature_path(displayed), method: :post, class: "menu-button" %>
-                      <% elsif displayed.legacy? %>
+                      <% elsif displayed&.legacy? %>
                         <%= form_with url: admin_nda_signature_path(displayed), method: :patch, data: { confirm: "Force approve this legacy NDA?" } do |form| %>
                           <%= form.text_field :reason, required: true, placeholder: "Approval reason" %>
                           <%= form.submit "Force approve", class: "menu-button" %>
@@ -85,9 +92,11 @@
                           <%= form.submit "Reset current NDA", class: "menu-button danger-text" %>
                         <% end %>
                       <% end %>
-                      <%= form_with url: admin_nda_signature_path(displayed), method: :delete, data: { confirm: "Permanently destroy this NDA and its linked import?" } do |form| %>
-                        <%= form.text_field :reason, required: true, placeholder: "Destruction reason" %>
-                        <%= form.submit "Destroy record", class: "menu-button danger-text" %>
+                      <% if displayed %>
+                        <%= form_with url: admin_nda_signature_path(displayed), method: :delete, data: { confirm: "Permanently destroy this NDA and its linked import?" } do |form| %>
+                          <%= form.text_field :reason, required: true, placeholder: "Destruction reason" %>
+                          <%= form.submit "Destroy record", class: "menu-button danger-text" %>
+                        <% end %>
                       <% end %>
                     </div>
                   </details>

@@ -42,4 +42,15 @@ class Admin::DashboardControllerTest < ActionController::TestCase
     get :index, params: { query: "%" }
     assert_select ".empty-cell", 1
   end
+
+  test "offers to move a legacy member to the current NDA" do
+    create_legacy_signature(users(:one))
+
+    get :index, params: { query: users(:one).slack_id }
+
+    assert_select "form[action=?]", require_current_nda_admin_user_path(users(:one)) do
+      assert_select "input[type=submit][value='Move to current NDA']"
+      assert_select "input[name=reason][required]"
+    end
+  end
 end
