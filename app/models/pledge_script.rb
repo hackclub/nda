@@ -1,8 +1,9 @@
 class PledgeScript
   BODY = [
-    "I understand I may be given access to private data, confidential information, or elevated access to Hack Club systems like Slack.",
-    "With great power comes great responsibility. I swear that I will uphold this responsibility.",
-    "I will keep private information private, I will always act responsibly with privileged access and permissions, and I will do my best to be a model member of Hack Club."
+    "I understand that I may be granted access to confidential information, private data, or elevated access to Hack Club systems like Slack.",
+    "I understand that I am serving as a volunteer and not as an employee or independent contractor of Hack Club - unless stated otherwise.",
+    "With great power comes great responsibility. I promise to protect confidential information, use my access responsibly, and never access or share information except as necessary for my authorized activities.",
+    "I will keep private information confidential, I will always act responsibly with any privileged access or permissions I receive, and do my best to be a model member of Hack Club."
   ].freeze
 
   def self.for(user)

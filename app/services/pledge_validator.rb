@@ -5,8 +5,9 @@ class PledgeValidator
   STOP_WORDS = %w[a an and i is it my of or the this to with].freeze
   REQUIRED_CONCEPTS = [
     %w[private data confidential information elevated access],
-    %w[great power great responsibility uphold responsibility],
-    %w[private information private responsibly privileged access permissions model member hack club]
+    %w[volunteer employee independent contractor unless stated otherwise],
+    %w[great power great responsibility protect confidential information access responsibly authorized activities],
+    %w[private information confidential responsibly privileged access permissions model member hack club]
   ].freeze
 
   class Error < StandardError; end

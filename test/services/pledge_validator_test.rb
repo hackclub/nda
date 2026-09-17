@@ -26,6 +26,16 @@ class PledgeValidatorTest < ActiveSupport::TestCase
     end
   end
 
+  test "requires the volunteer relationship acknowledgement" do
+    transcript = PledgeScript.for(@user).sub(PledgeScript::BODY.second, "")
+
+    with_transcript(transcript) do
+      assert_raises(PledgeValidator::Rejected) do
+        PledgeValidator.verify!(@video, user: @user)
+      end
+    end
+  end
+
   test "rejects a transcript missing the pledge" do
     with_transcript("Hello, this is a video.") do
       assert_raises(PledgeValidator::Rejected) do

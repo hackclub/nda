@@ -14,7 +14,7 @@ module LegacyNda
     class << self
       def call(body)
         redacted = Redactor.call(body)
-        expected = tokens(NdaDocument::TEXT)
+        expected = tokens(NdaDocument::LEGACY_TEXT)
         actual = tokens(redacted)
         shared = (expected & actual).size
         containment = shared.fdiv(expected.size)

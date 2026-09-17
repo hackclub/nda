@@ -5,17 +5,24 @@ class LegacyNda::ContentMatchTest < ActiveSupport::TestCase
     result = LegacyNda::ContentMatch.call(NdaDocument::TEXT)
 
     assert result.match?
-    assert_equal 1.0, result.containment
+    assert_operator result.containment, :>=, LegacyNda::ContentMatch::MATCH_CONTAINMENT
     assert_equal LegacyNda::ContentMatch::HEADINGS.size, result.headings_found
     assert_empty result.headings_missing
     assert_equal 1.0, result.heading_ratio
+  end
+
+  test "matches the previous agreement after a new revision becomes current" do
+    result = LegacyNda::ContentMatch.call(NdaDocument::LEGACY_TEXT)
+
+    assert result.match?
+    assert_equal 1.0, result.containment
   end
 
   test "matches a genuine agreement carrying extra material" do
     result = LegacyNda::ContentMatch.call(NdaDocument::TEXT + (" appendix schedule exhibit annex " * 2000))
 
     assert result.match?, "containment must not punish a document for being long"
-    assert_equal 1.0, result.containment
+    assert_operator result.containment, :>=, LegacyNda::ContentMatch::MATCH_CONTAINMENT
     assert result.jaccard < result.containment
   end
 

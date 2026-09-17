@@ -129,6 +129,8 @@ input:focus, select:focus { border-color: var(--red); box-shadow: 0 0 0 2px #ec3
 blockquote { margin: 0 0 28px; padding: 22px 24px; border-left: 3px solid var(--red); background: #f0f0ed; color: #3d3f49; line-height: 1.6; }
 blockquote p { margin: 0 0 14px; }
 blockquote p:last-child { margin-bottom: 0; }
+blockquote ul { margin: 0; padding-left: 22px; }
+blockquote li + li { margin-top: 10px; }
 .upload-zone { position: relative; padding: 32px; display: flex; align-items: center; flex-direction: column; gap: 7px; border: 1px dashed #aaa; border-radius: 8px; background: white; color: var(--muted); text-align: center; cursor: pointer; }
 .upload-zone:hover { border-color: var(--red); }
 .upload-zone.is-invalid { border-color: var(--red); }

@@ -62,6 +62,16 @@ class NdaSignaturesControllerFormTest < ActionController::TestCase
     assert_select "input[name='cosigner_email'][autocomplete='off']"
     assert_select "select[name='user[country]'] option[value='United States']"
   end
+
+  test "shows the signer context and revised pledge" do
+    session[:user_id] = users(:one).id
+    get :show
+
+    assert_select ".lede p", count: NdaDocument::SIGNER_CONTEXT.size
+    assert_select ".lede", /does not create an employment or independent contractor relationship/
+    assert_select "[data-pledge] ul li", count: PledgeScript::BODY.size
+    PledgeScript::BODY.each { |item| assert_select "[data-pledge] li", text: item }
+  end
 end
 
 class NdaSignaturesControllerRetryTest < ActionController::TestCase

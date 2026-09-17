@@ -38,7 +38,7 @@
     <div class="progress"><div class="progress-step active"><b>1</b><span>Your details</span></div><i></i><div class="progress-step"><b>2</b><span>Video pledge</span></div><i></i><div class="progress-step"><b>3</b><span>Sign contract</span></div></div>
     <%= form_with url: nda_signature_path, multipart: true, class: "wizard-form", data: { wizard_form: true } do |form| %>
       <section class="form-card wizard-panel active" data-step="1">
-        <p class="lede">If you've been asked to sign this, it's because you're probably about to get access to a Hack Club system that contains sensitive data. This is a big responsibility. Sign this to affirm that you will never misuse your access and will keep any private data confidential.</p>
+        <div class="lede"><% NdaDocument::SIGNER_CONTEXT.each do |_, paragraph| %><p><%= paragraph %></p><% end %></div>
         <div class="field-grid two"><label>Legal first name *<%= text_field_tag "user[legal_first_name]", current_user.default_legal_first_name, required: true, autocomplete: "given-name" %></label><label>Legal last name *<%= text_field_tag "user[legal_last_name]", current_user.default_legal_last_name, required: true, autocomplete: "family-name" %></label></div>
         <div class="field-grid two"><label>Email *<small>Must match the email you use on Slack.</small><%= email_field_tag "user[email]", current_user.email, required: true, autocomplete: "email" %></label><label>Date of birth *<small>Full date, including year.</small><%= date_field_tag "user[birthdate]", current_user.birthdate, required: true, max: Date.current, autocomplete: "bday" %></label></div>
         <label>Physical address *<small>Your current home address.</small><%= text_field_tag "user[address_line_1]", current_user.address_line_1, required: true, autocomplete: "address-line1" %></label>
@@ -50,7 +50,7 @@
       </section>
       <section class="form-card wizard-panel" data-step="2" hidden>
         <p class="lede">Upload a video with your face clearly visible and your right hand raised. Read the following aloud:</p>
-        <blockquote data-pledge><p data-pledge-intro>Complete your details in step one to generate your pledge.</p><% PledgeScript::BODY.each do |paragraph| %><p><%= paragraph %></p><% end %></blockquote>
+        <blockquote data-pledge><p data-pledge-intro>Complete your details in step one to generate your pledge.</p><ul><% PledgeScript::BODY.each do |item| %><li><%= item %></li><% end %></ul></blockquote>
         <label class="upload-zone" data-dropzone><span class="upload-icon">↑</span><strong>Drop your video here or <u>browse</u></strong><small id="identity-video-help">MP4 or WebM only · maximum 25 MB</small><%= file_field_tag :identity_video, accept: ".mp4,.webm,video/mp4,video/webm", required: true, aria: { describedby: "identity-video-help identity-video-error" } %></label>
         <div class="upload-feedback"><p id="identity-video-error" class="upload-error" data-upload-error role="alert" hidden></p><button type="button" class="remove-file" data-remove-file hidden>Remove file</button></div>
         <p class="recorder-note">Need to record your video? We recommend <a href="https://www.cam-recorder.com/" target="_blank" rel="noopener noreferrer">Cam Recorder</a>.</p>

@@ -22,6 +22,14 @@ class NdaDocumentTest < ActiveSupport::TestCase
     assert_includes NdaDocument::TEXT, NdaDocument::FOOTER
   end
 
+  test "the current revision explains the signer relationship" do
+    assert_equal "2026-09-17", NdaDocument::VERSION
+    assert_includes NdaDocument::TEXT, "serving as a volunteer"
+    assert_includes NdaDocument::TEXT, "does not create an employment or independent contractor relationship"
+    assert_not_includes NdaDocument::LEGACY_TEXT, "serving as a volunteer"
+    assert_includes NdaDocument::LEGACY_TEXT, NdaDocument::LEGACY_FOOTER
+  end
+
   test "renders every section and sub-clause" do
     html = ApplicationController.render(partial: "nda_signatures/document")
 

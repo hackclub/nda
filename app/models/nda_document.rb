@@ -1,22 +1,45 @@
 require "digest"
 
 class NdaDocument
-  VERSION = "2025-04-01-corrected"
+  VERSION = "2026-09-17"
   LEGACY_VERSION = "2025-04-01"
   TITLE = "MUTUAL NON-DISCLOSURE AGREEMENT"
-  FOOTER = "Last revised 2025-04-01"
+  FOOTER = "Last revised 2026-09-17"
+  LEGACY_FOOTER = "Last revised 2025-04-01"
 
   def self.para(text) = [ :p, text.squish ]
   def self.clause(text) = [ :clause, text.squish ]
   def self.subhead(text) = [ :subhead, text.squish ]
 
-  INTRODUCTION = [
+  LEGACY_INTRODUCTION = [
     para(<<~TEXT),
       This Mutual Non-Disclosure Agreement (the “Agreement”) is entered into by and between the Hack Foundation
       (“Hack Club” or “Organization”) with an address of 15 Falls Road, Shelburne, VT 05482 and Recipient. Hack
       Club and Recipient are sometimes referred to individually herein as a “Party” or collectively as the “Parties”.
     TEXT
-    para("If Recipient is under the age of 18, this Agreement must also be co-signed by Co-signer."),
+    para("If Recipient is under the age of 18, this Agreement must also be co-signed by Co-signer.")
+  ].freeze
+
+  SIGNER_CONTEXT = [
+    para(<<~TEXT),
+      If you've been asked to sign this it means you're likely going to be granted access to systems or information
+      that contain confidential or sensitive data.
+    TEXT
+    para(<<~TEXT),
+      Part of being a volunteer at Hack Club means protecting that information. By signing this agreement, you
+      acknowledge that you are serving as a volunteer or have been contracted / employed by Hack Club, agree to
+      keep confidential information secure, and agree not to access, use, or disclose it except as necessary to support
+      your authorized activities with Hack Club.
+    TEXT
+    para(<<~TEXT)
+      This agreement does not create an employment or independent contractor relationship with The Hack Foundation
+      or Hack Club.
+    TEXT
+  ].freeze
+
+  INTRODUCTION = [
+    *LEGACY_INTRODUCTION,
+    *SIGNER_CONTEXT,
     para(<<~TEXT)
       Due to their employment and/or ongoing business relationship, which will necessarily involve the exchange of
       certain information deemed confidential, and in consideration of the foregoing and the mutual covenants and
@@ -272,6 +295,12 @@ class NdaDocument
     INTRODUCTION.map(&:last) +
     SECTIONS.flat_map { |title, blocks| [ title ] + blocks.map(&:last) } +
     [ FOOTER ]).join("\n\n").freeze
+
+  LEGACY_TEXT = ([ TITLE ] +
+    LEGACY_INTRODUCTION.map(&:last) +
+    [ INTRODUCTION.last.last ] +
+    SECTIONS.flat_map { |title, blocks| [ title ] + blocks.map(&:last) } +
+    [ LEGACY_FOOTER ]).join("\n\n").freeze
 
   def self.sha256 = Digest::SHA256.hexdigest(TEXT)
 end

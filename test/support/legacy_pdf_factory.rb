@@ -56,7 +56,7 @@ module LegacyPdfFactory
 
   def legacy_document_pdf(recipient_name: "Ada Lovelace", recipient_email: "ada@example.com",
     cosigner_name: nil, cosigner_email: nil, envelope_id: "envelope_lhecmvlheriakemt",
-    signed_at: Time.current.utc, body_date: Date.current.to_s, body: NdaDocument::TEXT,
+    signed_at: Time.current.utc, body_date: Date.current.to_s, body: NdaDocument::LEGACY_TEXT,
     certificate_page: true, **options)
     lines = body_lines(recipient_name, recipient_email, cosigner_name, cosigner_email, body, body_date)
     pages = lines.each_slice(40).to_a

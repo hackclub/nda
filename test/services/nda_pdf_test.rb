@@ -27,6 +27,14 @@ class NdaPdfTest < ActiveSupport::TestCase
     assert_includes text, "AGREED"
   end
 
+  test "includes the current signer context and revision date" do
+    text = text_of(@signature)
+
+    assert_includes text, "serving as a volunteer"
+    assert_includes text, "does not create an employment or independent contractor relationship"
+    assert_includes text, NdaDocument::FOOTER
+  end
+
   test "names a co-signer only when there is one" do
     assert_not_includes text_of(@signature), "Co-signer Signature"
 
