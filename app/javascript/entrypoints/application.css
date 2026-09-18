@@ -88,7 +88,7 @@ h1 { margin: 10px 0 14px; font-size: 44px; line-height: 1.05; letter-spacing: -.
 .flash-alert { background: #fff0f2; color: #9f2438; }
 
 .form-shell { max-width: 900px; margin: 0 auto 80px; padding: 0 28px; }
-.progress { max-width: 620px; margin: 36px 0 52px; display: flex; align-items: center; }
+.progress { max-width: 620px; margin: 36px auto 52px; display: flex; align-items: center; }
 .progress i { height: 1px; flex: 1; background: var(--line); }
 .progress-step { display: flex; align-items: center; gap: 8px; color: #96979d; font-size: 12px; }
 .progress-step b { width: 24px; height: 24px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; font-size: 11px; }
@@ -97,6 +97,7 @@ h1 { margin: 10px 0 14px; font-size: 44px; line-height: 1.05; letter-spacing: -.
 .form-card { max-width: 840px; margin: auto; }
 .form-card h1 { font-size: 44px; }
 .lede { max-width: 680px; margin: 0 0 36px; color: var(--muted); font-size: 16px; line-height: 1.6; }
+.wizard-panel[data-step="1"] > .lede { max-width: none; }
 .field-grid { display: grid; gap: 24px; }
 .field-grid.two { grid-template-columns: 1fr 1fr; }
 .field-grid.three { grid-template-columns: repeat(3, 1fr); }
