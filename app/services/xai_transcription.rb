@@ -12,7 +12,7 @@ class XaiTranscription
     file = UploadIO.new(uploaded_file.tempfile, uploaded_file.content_type, uploaded_file.original_filename)
     request = Net::HTTP::Post::Multipart.new(
       ENDPOINT.path,
-      { "format" => "true", "language" => "en", "keyterm" => "Hack Club", "file" => file },
+      { "model" => "grok-voice-transcribe-2.0", "format" => "true", "language" => "en", "keyterm" => "Hack Club", "file" => file },
       "Authorization" => "Bearer #{api_key}"
     )
     response = Net::HTTP.start(ENDPOINT.host, ENDPOINT.port, use_ssl: true, open_timeout: 10, read_timeout: 90) do |http|

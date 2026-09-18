@@ -37,6 +37,36 @@ class AirtableSyncTest < ActiveSupport::TestCase
     assert_equal "recOld", @signature.reload.airtable_record_id
   end
 
+  test "moves an existing row from the same user's legacy signature to their current signature" do
+    legacy = create_legacy_signature(@user, airtable_record_id: "recOld", airtable_synced_at: 1.year.ago)
+    row = { id: "recOld", "Email": "ada@example.com" }
+
+    fake = with_airtable(rows: [ row ]) { AirtableSync.call(@signature) }
+
+    assert_equal "recOld", fake.updated.sole.first
+    assert_nil legacy.reload.airtable_record_id
+    assert_equal "recOld", @signature.reload.airtable_record_id
+    assert @signature.airtable_synced_at.present?
+  end
+
+  test "refuses to write to a row linked to another user" do
+    create_legacy_signature(users(:two), airtable_record_id: "recOld")
+    row = { id: "recOld", "Email": "ada@example.com" }
+    fake = nil
+
+    error = assert_raises(AirtableClient::Error) do
+      with_airtable(rows: [ row ]) do |airtable|
+        fake = airtable
+        AirtableSync.call(@signature)
+      end
+    end
+
+    assert_match(/another user/, error.message)
+    assert_empty fake.updated
+    assert_empty fake.attachments
+    assert_nil @signature.reload.airtable_record_id
+  end
+
   test "prefers a row already carrying the member's Slack ID" do
     rows = [ { id: "recEmail", "Email": "ada@example.com" },
              { id: "recSlack", "Email": "other@example.com", "Slack ID": @user.slack_id } ]

@@ -8,9 +8,10 @@ class AirtableSync
       user = signature.user
       fields = fields(signature, user)
       existing = signature.airtable_record_id.presence || locate(user)
+      ensure_record_available!(signature, existing) if existing
       record_id = (existing ? AirtableClient.update(existing, fields) : AirtableClient.create(fields)).fetch("id")
       attachments(signature, record_id)
-      signature.update!(airtable_record_id: record_id, airtable_synced_at: Time.current)
+      persist_sync!(signature, record_id)
     end
 
     private
@@ -21,6 +22,24 @@ class AirtableSync
     end
 
     def by(filter) = AirtableClient.records(filter: filter, fields: [ "Email" ], max_records: 1).dig(0, "id")
+
+    def ensure_record_available!(signature, record_id)
+      owner = NdaSignature.find_by(airtable_record_id: record_id)
+      return if owner.nil? || owner.id == signature.id || owner.user_id == signature.user_id
+
+      raise AirtableClient::Error, "Airtable record is already linked to another user"
+    end
+
+    def persist_sync!(signature, record_id)
+      NdaSignature.transaction do
+        owner = NdaSignature.lock.find_by(airtable_record_id: record_id)
+        ensure_record_available!(signature, record_id) if owner
+        owner.update!(airtable_record_id: nil) if owner && owner.id != signature.id
+        signature.update!(airtable_record_id: record_id, airtable_synced_at: Time.current)
+      end
+    rescue ActiveRecord::RecordNotUnique
+      raise AirtableClient::Error, "Airtable record was linked to another signature during sync"
+    end
 
     def fields(signature, user)
       cosigner_first, cosigner_last = signature.cosigner_name.to_s.split(/\s+/, 2)
