@@ -1,0 +1,11 @@
+<Style backgroundColor="#ffffff" bodyColor="#ffffff" bodyXPadding="24" bodyYPadding="32" textBaseColor="#17202a" textLinkColor="#ec3750" buttonBodyColor="#ec3750" buttonTextColor="#ffffff" buttonBorderRadius="6" />
+<H3>Hack Club</H3>
+<H1>Your signature is needed</H1>
+<Paragraph fontSize="16" lineHeight="165">Hi {data.cosigner_name},</Paragraph>
+<Paragraph fontSize="16" lineHeight="165"><Strong>{data.signer_fullName}</Strong> is about to get access to a Hack Club system that holds sensitive data, and has signed our Contributor Non-Disclosure Agreement. Because they're under 18, we need a parent or guardian to agree to it as well before it takes effect.</Paragraph>
+<Paragraph fontSize="16" lineHeight="165">Reviewing and signing takes a couple of minutes. This link expires on {data.cosign_expiresOn}.</Paragraph>
+<Button href="{data.cosign_url}">Review and sign the agreement</Button>
+<Paragraph fontSize="13" lineHeight="160">Or paste this link into your browser:<Br />{data.cosign_url}</Paragraph>
+<Paragraph fontSize="14" lineHeight="160">This link is unique to you — please don't forward it. Nothing happens until you sign. If you weren't expecting this email, you can ignore it, and no agreement will take effect.</Paragraph>
+<Divider />
+<Paragraph fontSize="12" lineHeight="170"><Strong>The Hack Foundation</Strong>, a 501(c)(3) nonprofit<Br />212 Battery St., Shelburne, VT 05401, USA<Br />This message concerns a legal agreement. Keep it for your records.</Paragraph>

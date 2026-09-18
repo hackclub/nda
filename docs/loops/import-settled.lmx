@@ -1,0 +1,10 @@
+<Style backgroundColor="#ffffff" bodyColor="#ffffff" bodyXPadding="24" bodyYPadding="32" textBaseColor="#17202a" textLinkColor="#ec3750" buttonBodyColor="#ec3750" buttonTextColor="#ffffff" buttonBorderRadius="6" />
+<H3>Hack Club</H3>
+<H1>You're already covered</H1>
+<Paragraph fontSize="16" lineHeight="165">Hi {data.signer_fullName},</Paragraph>
+<Paragraph fontSize="16" lineHeight="165">We found a Hack Club Non-Disclosure Agreement you signed on {data.nda_signedOn} through our old signing system and linked it to your account. You don't need to sign anything again.</Paragraph>
+<Button href="{data.nda_importUrl}">View your NDA</Button>
+<Paragraph fontSize="13" lineHeight="160">Or paste this link into your browser:<Br />{data.nda_importUrl}</Paragraph>
+<Paragraph fontSize="14" lineHeight="160">If you don't recognise this, write to <Link href="mailto:team@hackclub.com">team@hackclub.com</Link> and we'll look into it.</Paragraph>
+<Divider />
+<Paragraph fontSize="12" lineHeight="170"><Strong>The Hack Foundation</Strong>, a 501(c)(3) nonprofit<Br />212 Battery St., Shelburne, VT 05401, USA<Br />This message concerns a legal agreement. Keep it for your records.</Paragraph>

@@ -1,0 +1,8 @@
+<Style backgroundColor="#ffffff" bodyColor="#ffffff" bodyXPadding="24" bodyYPadding="32" textBaseColor="#17202a" textLinkColor="#ec3750" buttonBodyColor="#ec3750" buttonTextColor="#ffffff" buttonBorderRadius="6" />
+<H3>Hack Club</H3>
+<H1>Thank you for signing</H1>
+<Paragraph fontSize="16" lineHeight="165">Hi {data.cosigner_name},</Paragraph>
+<Paragraph fontSize="16" lineHeight="165">You've co-signed the Hack Club Contributor Non-Disclosure Agreement for <Strong>{data.signer_fullName}</Strong> on {data.nda_signedOn}. The agreement is now complete and in effect.</Paragraph>
+<Paragraph fontSize="14" lineHeight="160">Keep this email for your records. If you have any questions about this agreement, write to <Link href="mailto:team@hackclub.com">team@hackclub.com</Link>.</Paragraph>
+<Divider />
+<Paragraph fontSize="12" lineHeight="170"><Strong>The Hack Foundation</Strong>, a 501(c)(3) nonprofit<Br />212 Battery St., Shelburne, VT 05401, USA<Br />This message concerns a legal agreement. Keep it for your records.</Paragraph>

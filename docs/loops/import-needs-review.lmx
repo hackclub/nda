@@ -1,0 +1,11 @@
+<Style backgroundColor="#ffffff" bodyColor="#ffffff" bodyXPadding="24" bodyYPadding="32" textBaseColor="#17202a" textLinkColor="#ec3750" buttonBodyColor="#ec3750" buttonTextColor="#ffffff" buttonBorderRadius="6" />
+<H3>Hack Club</H3>
+<H1>We're taking a closer look</H1>
+<Paragraph fontSize="16" lineHeight="165">Hi {data.signer_fullName},</Paragraph>
+<Paragraph fontSize="16" lineHeight="165">Thanks for sending over your existing NDA. A couple of details didn't line up neatly enough for us to file it automatically, so someone at Hack Club will review it by hand.</Paragraph>
+<Paragraph fontSize="16" lineHeight="165">You don't need to do anything else. We'll message you on Slack when it's done.</Paragraph>
+<Button href="{data.nda_importUrl}">Check the status</Button>
+<Paragraph fontSize="13" lineHeight="160">Or paste this link into your browser:<Br />{data.nda_importUrl}</Paragraph>
+<Paragraph fontSize="14" lineHeight="160">Reviews usually take a day or two. If you'd rather not wait, you can sign a fresh NDA from the same page.</Paragraph>
+<Divider />
+<Paragraph fontSize="12" lineHeight="170"><Strong>The Hack Foundation</Strong>, a 501(c)(3) nonprofit<Br />212 Battery St., Shelburne, VT 05401, USA<Br />This message concerns a legal agreement. Keep it for your records.</Paragraph>
