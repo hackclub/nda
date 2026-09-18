@@ -19,9 +19,10 @@ class XaiTranscription
       http.request(request)
     end
     raise Error, "xAI returned HTTP #{response.code}" unless response.is_a?(Net::HTTPSuccess)
+    ZeroDataRetention.verify!(response) if response["x-zero-data-retention"].present?
 
     JSON.parse(response.body).fetch("text")
-  rescue KeyError, JSON::ParserError, Timeout::Error, SocketError, SystemCallError => error
+  rescue KeyError, JSON::ParserError, Timeout::Error, SocketError, SystemCallError, ZeroDataRetention::Error => error
     raise Error, error.message
   end
 end

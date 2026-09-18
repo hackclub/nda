@@ -46,9 +46,10 @@ class XaiDocumentReview
         ENDPOINT.host, ENDPOINT.port, use_ssl: true, open_timeout: 5, read_timeout: 60
       ) { |http| http.request(request) }
       raise Error, "xAI returned HTTP #{response.code}" unless response.is_a?(Net::HTTPSuccess)
+      ZeroDataRetention.verify!(response)
 
       parse(response.body)
-    rescue Timeout::Error, SocketError, SystemCallError, JSON::ParserError, KeyError => error
+    rescue Timeout::Error, SocketError, SystemCallError, JSON::ParserError, KeyError, ZeroDataRetention::Error => error
       raise Error, error.message
     end
 

@@ -8,9 +8,22 @@ class XaiTranscriptionTest < ActiveSupport::TestCase
     )
   end
 
-  test "returns the transcript without checking zero data retention" do
-    with_response(zdr: "false") do
+  test "returns the transcript when zero data retention is confirmed" do
+    with_response(zdr: "true") do
       assert_equal "I pledge.", XaiTranscription.call(@video)
+    end
+  end
+
+  test "returns the transcript when the voice endpoint omits the zero data retention header" do
+    with_response(zdr: nil) do
+      assert_equal "I pledge.", XaiTranscription.call(@video)
+    end
+  end
+
+  test "rejects a transcript when zero data retention is not confirmed" do
+    with_response(zdr: "false") do
+      error = assert_raises(XaiTranscription::Error) { XaiTranscription.call(@video) }
+      assert_match(/did not confirm zero data retention/, error.message)
     end
   end
 
