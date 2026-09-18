@@ -20,6 +20,8 @@ services:
       context: .
       target: build
     command: bash -c "bin/rails db:prepare && bin/rails server -b 0.0.0.0"
+    env_file:
+      - .env
     environment:
       RAILS_ENV: development
       DATABASE_URL: postgres://nda:nda@db:5432/nda_development
