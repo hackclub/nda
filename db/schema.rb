@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_17_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_18_191000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -103,8 +103,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_140000) do
   end
 
   create_table "nda_signatures", force: :cascade do |t|
+    t.datetime "airtable_agreement_attached_at"
     t.string "airtable_record_id"
+    t.integer "airtable_sync_attempts", default: 0, null: false
+    t.string "airtable_sync_error"
+    t.datetime "airtable_sync_failed_at"
     t.datetime "airtable_synced_at"
+    t.datetime "airtable_video_attached_at"
     t.string "cosigner_email"
     t.datetime "cosigner_invited_at"
     t.string "cosigner_ip_address"
@@ -322,6 +327,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_140000) do
     t.string "region"
     t.string "slack_id", null: false
     t.datetime "updated_at", null: false
+    t.string "verified_email"
     t.index ["hack_club_identity_id"], name: "index_users_on_hack_club_identity_id", unique: true
     t.index ["slack_id"], name: "index_users_on_slack_id", unique: true
   end

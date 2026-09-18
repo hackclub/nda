@@ -106,6 +106,32 @@ class AirtableSyncTest < ActiveSupport::TestCase
     assert_equal 1, fake.updated.size
   end
 
+  test "a retry resumes after the last successful attachment" do
+    first = nil
+    assert_raises(AirtableClient::TransientError) do
+      with_airtable do |airtable|
+        first = airtable
+        upload = airtable.method(:upload_attachment)
+        airtable.define_singleton_method(:upload_attachment) do |record_id, **arguments|
+          raise AirtableClient::TransientError, "temporary upload failure" if arguments[:field] == "Video"
+
+          upload.call(record_id, **arguments)
+        end
+        AirtableSync.call(@signature)
+      end
+    end
+
+    assert_equal [ "Signed NDA" ], first.attachments.map { _1[:field] }
+    assert_equal "rec1new", @signature.reload.airtable_record_id
+    assert @signature.airtable_agreement_attached_at?
+    assert_not @signature.airtable_video_attached_at?
+
+    second = with_airtable { AirtableSync.call(@signature.reload) }
+
+    assert_equal [ "Video" ], second.attachments.map { _1[:field] }
+    assert @signature.reload.airtable_synced_at?
+  end
+
   test "leaves a video over Airtable's cap in R2 and still syncs the rest" do
     @signature.identity_video.purge
     @signature.identity_video.attach(

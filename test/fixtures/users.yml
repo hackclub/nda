@@ -4,6 +4,7 @@ one:
   first_name: Ada
   last_name: Lovelace
   email: ada@example.com
+  verified_email: ada@example.com
 
 two:
   hack_club_identity_id: ident!two
@@ -11,3 +12,4 @@ two:
   first_name: Grace
   last_name: Hopper
   email: grace@example.com
+  verified_email: grace@example.com

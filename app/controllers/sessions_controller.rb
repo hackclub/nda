@@ -21,6 +21,7 @@ class SessionsController < ApplicationController
       first_name: identity["first_name"],
       last_name: identity["last_name"],
       email: identity["primary_email"],
+      verified_email: identity["primary_email"],
       admin: User.admin_slack_ids.include?(identity.fetch("slack_id").to_s.upcase)
     )
     imported = check_existing_nda(user)

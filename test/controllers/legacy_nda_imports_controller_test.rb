@@ -152,4 +152,32 @@ class LegacyNdaImportsControllerTest < ActionController::TestCase
 
     assert_predicate users(:one).legacy_nda_imports.sole, :pending?
   end
+
+  test "does not consume a valid code when settlement has a transient failure" do
+    import = users(:one).legacy_nda_imports.create!(source: "airtable")
+    with_stubbed_mail { LegacyNda::EmailChallenge.issue!(import, email: "ada@example.com") }
+    code = sent_mail_for(:import_challenge).last[:data_variables]["challenge_code"]
+    singleton = LegacyNda::AirtableImport.singleton_class
+    original = singleton.instance_method(:settle_challenge!)
+    singleton.define_method(:settle_challenge!) { |_| raise AirtableClient::TransientError, "temporary outage" }
+
+    assert_raises(AirtableClient::TransientError) { post :challenge, params: { code: code } }
+
+    assert import.reload.challenge_digest.present?
+    assert_predicate import, :challenge_pending?
+  ensure
+    singleton&.define_method(:settle_challenge!, original) if original
+  end
+
+  test "can issue a fresh code after the resend interval" do
+    import = users(:one).legacy_nda_imports.create!(source: "upload")
+    with_stubbed_mail { LegacyNda::EmailChallenge.issue!(import, email: "ada@example.com") }
+    old_digest = import.challenge_digest
+    import.update_column(:updated_at, LegacyNda::EmailChallenge::RESEND_INTERVAL.ago - 1.second)
+
+    with_stubbed_mail { post :resend_challenge }
+
+    assert_redirected_to legacy_nda_import_path
+    assert_not_equal old_digest, import.reload.challenge_digest
+  end
 end

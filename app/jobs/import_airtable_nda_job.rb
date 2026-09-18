@@ -6,9 +6,12 @@ class ImportAirtableNdaJob < ApplicationJob
 
   def perform(import_id)
     import = LegacyNdaImport.includes(:user).find(import_id)
-    return unless import.pending?
+    return unless import.pending? || import.verifying?
 
-    import.update!(state: "verifying")
+    import.update!(state: "verifying") if import.pending?
     LegacyNda::AirtableImport.claim!(import)
+  rescue AirtableClient::TransientError
+    import.update!(state: "pending") if import&.verifying?
+    raise
   end
 end

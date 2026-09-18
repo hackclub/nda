@@ -8,8 +8,12 @@ class Admin::NdaSignaturesControllerTest < ActionController::TestCase
   setup do
     @admin = users(:two)
     @admin.update!(admin: true)
+    @previous_admins = ENV["ADMIN_SLACK_IDS"]
+    ENV["ADMIN_SLACK_IDS"] = @admin.slack_id
     session[:user_id] = @admin.id
   end
+
+  teardown { @previous_admins.nil? ? ENV.delete("ADMIN_SLACK_IDS") : ENV["ADMIN_SLACK_IDS"] = @previous_admins }
 
   test "force approves a legacy signature and records an audit event" do
     signature = create_legacy_signature(users(:one), verification_state: "needs_review")

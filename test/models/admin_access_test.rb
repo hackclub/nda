@@ -18,4 +18,12 @@ class AdminAccessTest < ActiveSupport::TestCase
     assert_empty User.admin_slack_ids
     assert_not users(:one).admin?
   end
+
+  test "removing a Slack ID from the allowlist revokes a persisted admin immediately" do
+    user = users(:one)
+    user.update!(admin: true)
+
+    assert_not user.admin_access?
+    with_admins(user.slack_id) { assert user.admin_access? }
+  end
 end

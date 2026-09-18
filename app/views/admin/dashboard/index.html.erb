@@ -23,7 +23,12 @@
   <section class="admin-section">
     <div class="section-heading">
       <div><h2>Systems</h2><p>Configuration and local service health. Airtable is contacted only when you run the live check.</p></div>
-      <%= link_to "Run live Airtable check", admin_root_path(check_airtable: 1), class: "button button-secondary" %>
+      <div class="button-row">
+        <% if @failed_airtable_jobs.positive? %>
+          <%= button_to "Retry #{@failed_airtable_jobs} failed Airtable #{'job'.pluralize(@failed_airtable_jobs)}", admin_retry_failed_airtable_jobs_path, class: "button button-secondary" %>
+        <% end %>
+        <%= link_to "Run live Airtable check", admin_root_path(check_airtable: 1), class: "button button-secondary" %>
+      </div>
     </div>
     <div class="system-grid">
       <% @systems.each do |system| %>
@@ -64,7 +69,10 @@
               <td><%= displayed&.signed_at ? tag.time(displayed.signed_at.to_date.to_fs(:medium), datetime: displayed.signed_at.iso8601, data: { local_time: true }) : "—" %></td>
               <td>
                 <% if displayed&.airtable_synced_at? %><span class="sync-state">Synced</span><small><%= displayed.airtable_record_id %></small>
-                <% elsif displayed %><span class="sync-state sync-pending">Pending</span>
+                <% elsif displayed&.airtable_sync_failed_at? %>
+                  <span class="sync-state sync-pending">Failed</span>
+                  <small title="<%= displayed.airtable_sync_error %>"><%= truncate(displayed.airtable_sync_error, length: 80) %></small>
+                <% elsif displayed %><span class="sync-state sync-pending">Pending</span><small><%= pluralize(displayed.airtable_sync_attempts, "attempt") if displayed.airtable_sync_attempts.positive? %></small>
                 <% else %>—<% end %>
               </td>
               <td>

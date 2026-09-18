@@ -11,6 +11,7 @@ Rails.application.routes.draw do
   end
   resource :legacy_nda_import, only: %i[show create] do
     post :challenge
+    post :resend_challenge
     post :lookup
     post :lookup_email
   end
@@ -20,6 +21,7 @@ Rails.application.routes.draw do
 
   namespace :admin do
     root "dashboard#index"
+    post "retry_failed_airtable_jobs", to: "dashboard#retry_failed_airtable_jobs"
     resources :nda_signatures, only: %i[update destroy] do
       post :sync, on: :member
     end

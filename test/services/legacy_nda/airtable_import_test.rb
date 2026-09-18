@@ -59,6 +59,17 @@ class LegacyNda::AirtableImportTest < ActiveSupport::TestCase
     assert_empty NdaSignature.all
   end
 
+  test "changing the contact email cannot claim another member's Airtable row" do
+    @user.update!(email: "victim@example.com")
+    victim = SIGNED.merge("Email": "victim@example.com")
+    import = import_for
+
+    with_airtable(rows: [ victim ]) { LegacyNda::AirtableImport.claim!(import) }
+
+    assert_predicate import.reload, :email_pending?
+    assert_nil import.nda_signature
+  end
+
   test "an address in the base is sent a code" do
     import = import_for
     import.update!(state: "email_pending")
@@ -102,7 +113,7 @@ class LegacyNda::AirtableImportTest < ActiveSupport::TestCase
     first = import_for
     with_airtable(rows: [ SIGNED ]) { LegacyNda::AirtableImport.claim!(first) }
 
-    users(:two).update!(email: "ada@example.com")
+    users(:two).update!(email: "ada@example.com", verified_email: "ada@example.com")
     second = import_for(users(:two))
     with_airtable(rows: [ SIGNED ]) { LegacyNda::AirtableImport.claim!(second) }
 
@@ -112,7 +123,7 @@ class LegacyNda::AirtableImportTest < ActiveSupport::TestCase
   end
 
   test "a crafted address cannot widen the lookup to somebody else's row" do
-    @user.update!(email: %q{a"),{Signed?})+("@example.com})
+    @user.update!(verified_email: %q{a"),{Signed?})+("@example.com})
     import = import_for
     with_airtable(rows: [ SIGNED ]) { LegacyNda::AirtableImport.claim!(import) }
 

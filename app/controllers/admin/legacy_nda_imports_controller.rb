@@ -15,6 +15,9 @@ class Admin::LegacyNdaImportsController < ApplicationController
     if params[:note].blank?
       return redirect_to admin_legacy_nda_imports_path, alert: "A reason is required."
     end
+    unless signature.needs_review?
+      return redirect_to admin_legacy_nda_imports_path, alert: "That import is no longer awaiting review."
+    end
 
     case params[:decision]
     when "approve" then approve!(signature)
@@ -34,6 +37,7 @@ class Admin::LegacyNdaImportsController < ApplicationController
         subject: signature, reason: params[:note])
     end
     SyncSignatureToAirtableJob.perform_later(signature.id) if AirtableClient.configured?
+    LegacyNda::ImportMailer.settled(signature.legacy_nda_import) if signature.legacy_nda_import
   end
 
   def revoke!(signature)
@@ -45,6 +49,7 @@ class Admin::LegacyNdaImportsController < ApplicationController
       AdminAction.record!(admin: current_user, target_user: signature.user, action: "revoke",
         subject: signature, reason: params[:note])
     end
+    LegacyNda::ImportMailer.rejected(signature.legacy_nda_import) if signature.legacy_nda_import
   end
 
   def review_attributes

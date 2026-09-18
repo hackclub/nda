@@ -21,7 +21,7 @@
       <div><dt>Content match</dt><dd><%= number_to_percentage(@signature.validation_score.to_f * 100, precision: 0) %></dd></div>
       <div><dt>Status</dt><dd>Waiting for approval or another attempt</dd></div>
     </dl>
-    <% if current_user.admin? && @signature.transcript.present? %>
+    <% if current_user.admin_access? && @signature.transcript.present? %>
       <div class="admin-override">
         <strong>Admin override</strong>
         <p>Approve this saved recording despite its pledge content score. The legal-name, contract acceptance, and uploaded-video checks still apply.</p>

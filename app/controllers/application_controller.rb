@@ -14,6 +14,6 @@ class ApplicationController < ActionController::Base
   end
 
   def require_admin
-    redirect_to root_path, alert: "Please sign in first!" unless current_user&.admin?
+    redirect_to root_path, alert: "Please sign in first!" unless current_user&.admin_access?
   end
 end

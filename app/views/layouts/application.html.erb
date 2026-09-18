@@ -12,7 +12,7 @@
   <body class="<%= content_for(:body_class) %>">
     <header class="site-header">
       <%= link_to root_path, class: "brand" do %><%= image_tag "hack-club-icon-rounded.png", class: "brand-mark", alt: "" %><span>Hack Club NDA</span><% end %>
-      <% if current_user %><div class="account"><span><%= current_user.display_name %></span><%= link_to "Admin", admin_root_path, class: "admin-link" if current_user.admin? %><%= button_to "Sign out", logout_path, method: :delete, class: "link-button" %></div><% end %>
+      <% if current_user %><div class="account"><span><%= current_user.display_name %></span><%= link_to "Admin", admin_root_path, class: "admin-link" if current_user.admin_access? %><%= button_to "Sign out", logout_path, method: :delete, class: "link-button" %></div><% end %>
     </header>
     <% if notice %><div class="flash flash-notice"><%= notice %></div><% end %>
     <% if alert %><div class="flash flash-alert"><%= alert %></div><% end %>

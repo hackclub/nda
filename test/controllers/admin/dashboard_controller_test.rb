@@ -13,8 +13,12 @@ class Admin::DashboardControllerTest < ActionController::TestCase
   setup do
     @admin = users(:two)
     @admin.update!(admin: true)
+    @previous_admins = ENV["ADMIN_SLACK_IDS"]
+    ENV["ADMIN_SLACK_IDS"] = @admin.slack_id
     session[:user_id] = @admin.id
   end
+
+  teardown { @previous_admins.nil? ? ENV.delete("ADMIN_SLACK_IDS") : ENV["ADMIN_SLACK_IDS"] = @previous_admins }
 
   test "turns away a signed in non-admin" do
     session[:user_id] = users(:one).id
@@ -52,5 +56,22 @@ class Admin::DashboardControllerTest < ActionController::TestCase
       assert_select "input[type=submit][value='Move to current NDA']"
       assert_select "input[name=reason][required]"
     end
+  end
+
+  test "retries only failed Airtable sync jobs" do
+    active_job = SyncSignatureToAirtableJob.new(123)
+    job = SolidQueue::Job.create!(
+      queue_name: "default", class_name: active_job.class.name, arguments: active_job.serialize,
+      active_job_id: active_job.job_id, scheduled_at: Time.current
+    )
+    failure = SolidQueue::FailedExecution.create!(
+      job: job, error: { exception_class: "AirtableClient::Error", message: "failed", backtrace: [] }
+    )
+
+    post :retry_failed_airtable_jobs
+
+    assert_redirected_to admin_root_path
+    assert_not failure.class.exists?(failure.id)
+    assert SolidQueue::ReadyExecution.exists?(job_id: job.id)
   end
 end

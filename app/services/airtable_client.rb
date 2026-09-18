@@ -87,16 +87,19 @@ class AirtableClient
         host.host, host.port, use_ssl: true, open_timeout: 5, read_timeout: 30
       ) { |http| http.request(request) }
       parse_response(response)
-    rescue Timeout::Error, SocketError, SystemCallError => error
-      raise TransientError, "Airtable is unavailable: #{error.message}"
+    rescue Timeout::Error, SocketError, SystemCallError, EOFError, OpenSSL::SSL::SSLError => error
+      raise TransientError, "Airtable is unavailable: #{error.class}"
     end
 
     def parse_response(response)
       return JSON.parse(response.body) if response.is_a?(Net::HTTPSuccess)
 
       code = response.code.to_i
-      error_class = code == 429 || code >= 500 ? TransientError : Error
-      raise error_class, "Airtable returned HTTP #{response.code}"
+      error_class = code == 408 || code == 429 || code >= 500 ? TransientError : Error
+      detail = JSON.parse(response.body).fetch("error", {})
+      detail = detail.values_at("type", "message").compact.join(": ") if detail.is_a?(Hash)
+      suffix = detail.to_s.squish.first(200)
+      raise error_class, "Airtable returned HTTP #{response.code}#{": #{suffix}" if suffix.present?}"
     rescue JSON::ParserError
       raise TransientError, "Airtable returned an invalid response"
     end

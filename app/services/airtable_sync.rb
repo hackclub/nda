@@ -6,19 +6,20 @@ class AirtableSync
   class << self
     def call(signature)
       user = signature.user
-      fields = fields(signature, user)
       existing = signature.airtable_record_id.presence || locate(user)
       ensure_record_available!(signature, existing) if existing
-      record_id = (existing ? AirtableClient.update(existing, fields) : AirtableClient.create(fields)).fetch("id")
+      record_id = (existing ? AirtableClient.update(existing, fields(signature, user)) :
+        AirtableClient.create(fields(signature, user))).fetch("id")
+      persist_record_link!(signature, record_id)
       attachments(signature, record_id)
-      persist_sync!(signature, record_id)
+      signature.update!(airtable_synced_at: Time.current, airtable_sync_error: nil, airtable_sync_failed_at: nil)
     end
 
     private
 
     def locate(user)
       by("{Slack ID} = #{AirtableClient.quote(user.slack_id)}") ||
-        by("LOWER({Email}) = #{AirtableClient.quote(user.email.to_s.strip.downcase)}")
+        by("LOWER({Email}) = #{AirtableClient.quote(user.verified_email.to_s.strip.downcase)}")
     end
 
     def by(filter) = AirtableClient.records(filter: filter, fields: [ "Email" ], max_records: 1).dig(0, "id")
@@ -30,12 +31,12 @@ class AirtableSync
       raise AirtableClient::Error, "Airtable record is already linked to another user"
     end
 
-    def persist_sync!(signature, record_id)
+    def persist_record_link!(signature, record_id)
       NdaSignature.transaction do
         owner = NdaSignature.lock.find_by(airtable_record_id: record_id)
         ensure_record_available!(signature, record_id) if owner
         owner.update!(airtable_record_id: nil) if owner && owner.id != signature.id
-        signature.update!(airtable_record_id: record_id, airtable_synced_at: Time.current)
+        signature.update!(airtable_record_id: record_id)
       end
     rescue ActiveRecord::RecordNotUnique
       raise AirtableClient::Error, "Airtable record was linked to another signature during sync"
@@ -67,8 +68,8 @@ class AirtableSync
     def attachments(signature, record_id)
       return if signature.airtable_synced_at?
 
-      attach_agreement(signature, record_id) if signature.native?
-      attach_video(signature, record_id)
+      attach_agreement(signature, record_id) if signature.native? && !signature.airtable_agreement_attached_at?
+      attach_video(signature, record_id) unless signature.airtable_video_attached_at?
     end
 
     def attach_agreement(signature, record_id)
@@ -79,13 +80,16 @@ class AirtableSync
         filename: NdaPdf.filename(signature),
         content_type: "application/pdf"
       )
+      signature.update!(airtable_agreement_attached_at: Time.current)
     end
 
     def attach_video(signature, record_id)
       blob = signature.identity_video.blob
-      return if blob.nil? || signature.identity_video_purged_at?
-      return Rails.logger.info("Signature #{signature.id}: video is #{blob.byte_size} bytes, too big for Airtable.") if
-        blob.byte_size > AirtableClient::MAX_ATTACHMENT_BYTES
+      return signature.update!(airtable_video_attached_at: Time.current) if blob.nil? || signature.identity_video_purged_at?
+      if blob.byte_size > AirtableClient::MAX_ATTACHMENT_BYTES
+        Rails.logger.info("Signature #{signature.id}: video is #{blob.byte_size} bytes, too big for Airtable.")
+        return signature.update!(airtable_video_attached_at: Time.current)
+      end
 
       AirtableClient.upload_attachment(
         record_id,
@@ -94,8 +98,10 @@ class AirtableSync
         filename: blob.filename.to_s,
         content_type: blob.content_type
       )
+      signature.update!(airtable_video_attached_at: Time.current)
     rescue SseCustomerBlob::Error, ActiveStorage::FileNotFoundError => error
       Rails.logger.warn("Signature #{signature.id}: video unreadable for Airtable sync (#{error.class}).")
+      signature.update!(airtable_video_attached_at: Time.current)
     end
   end
 end

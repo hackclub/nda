@@ -4,23 +4,23 @@ module LegacyNda
   class AirtableImport
     class << self
       def claim!(import)
-        record = AirtableRecord.signed_for(import.user.email)
+        record = AirtableRecord.signed_for(import.user.verified_email)
         return settle!(import, record) if record && !taken?(record)
 
         import.update!(state: "email_pending")
       end
 
       def check_on_sign_in(user, ip: nil)
-        return nil if user.email.blank? || user.reportable_nda_signature
+        return nil if user.verified_email.blank? || user.reportable_nda_signature
 
-        cached = AirtableNdaRecord.signed_for(user.email)
+        cached = AirtableNdaRecord.signed_for(user.verified_email)
         if user.airtable_checked_at?
           return nil if cached.nil? || taken?(cached)
 
           return settle!(user.legacy_nda_imports.create!(source: "airtable", ip_address: ip), cached)
         end
 
-        record = cached || AirtableRecord.signed_for(user.email)
+        record = cached || AirtableRecord.signed_for(user.verified_email)
         user.update!(airtable_checked_at: Time.current)
         return nil if record.nil? || taken?(record)
 

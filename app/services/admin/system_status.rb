@@ -27,7 +27,13 @@ module Admin
 
     def queue
       failures = SolidQueue::FailedExecution.count
-      return Status.new(name: "Job queue", state: :warning, detail: "#{failures} failed job#{'s' unless failures == 1}") if failures.positive?
+      if failures.positive?
+        airtable = SolidQueue::FailedExecution.joins(:job)
+          .where(solid_queue_jobs: { class_name: "SyncSignatureToAirtableJob" }).count
+        detail = "#{failures} failed job#{'s' unless failures == 1}"
+        detail += " (#{airtable} Airtable sync)" if airtable.positive?
+        return Status.new(name: "Job queue", state: :warning, detail: detail)
+      end
 
       Status.new(name: "Job queue", state: :ok, detail: "No failed jobs")
     rescue ActiveRecord::ActiveRecordError, NameError
@@ -52,7 +58,14 @@ module Admin
     end
 
     def required_configuration
-      %w[HACK_CLUB_CLIENT_ID HACK_CLUB_CLIENT_SECRET XAI_API_KEY]
+      %w[
+        HACK_CLUB_CLIENT_ID HACK_CLUB_CLIENT_SECRET HACK_CLUB_REDIRECT_URI XAI_API_KEY SLACK_BOT_TOKEN
+        AIRTABLE_TOKEN AIRTABLE_BASE_ID AIRTABLE_TABLE_ID LOOPS_API_KEY
+        LOOPS_IMPORT_CHALLENGE_TRANSACTIONAL_ID LOOPS_IMPORT_SETTLED_TRANSACTIONAL_ID
+        LOOPS_IMPORT_REJECTED_TRANSACTIONAL_ID LOOPS_IMPORT_NEEDS_REVIEW_TRANSACTIONAL_ID
+        LOOPS_SIGNATURE_RECEIPT_TRANSACTIONAL_ID LOOPS_COSIGN_REQUEST_TRANSACTIONAL_ID
+        LOOPS_COSIGN_RECEIPT_TRANSACTIONAL_ID
+      ]
     end
   end
 end

@@ -47,19 +47,31 @@ class LegacyNdaImportsController < ApplicationController
     redirect_to legacy_nda_import_path
   end
 
+  def resend_challenge
+    import = current_import
+    return redirect_to legacy_nda_import_path unless import && LegacyNda::EmailChallenge.resendable?(import)
+
+    if import.source_airtable?
+      LegacyNda::AirtableImport.challenge!(import, import.challenge_email)
+    else
+      LegacyNda::EmailChallenge.issue!(import, email: import.challenge_email)
+    end
+    redirect_to legacy_nda_import_path, notice: "If that address has an NDA on file, we sent a fresh code."
+  end
+
   def challenge
     import = current_import
     return redirect_to legacy_nda_import_path unless import&.challenge_pending?
 
-    unless LegacyNda::EmailChallenge.verify(import, params[:code])
-      return redirect_to legacy_nda_import_path, alert: "That code isn't right, or it has expired."
+    settled = LegacyNda::EmailChallenge.verify(import, params[:code]) do
+      if import.source_airtable?
+        LegacyNda::AirtableImport.settle_challenge!(import)
+      else
+        LegacyNda::Claim.settle!(import)
+      end
     end
+    return redirect_to legacy_nda_import_path, alert: "That code isn't right, or it has expired." unless settled
 
-    if import.source_airtable?
-      LegacyNda::AirtableImport.settle_challenge!(import)
-    else
-      LegacyNda::Claim.settle!(import)
-    end
     redirect_to legacy_nda_import_path
   end
 

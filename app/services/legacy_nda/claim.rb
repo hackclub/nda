@@ -78,7 +78,7 @@ module LegacyNda
       end
 
       def account_email_matches?(import)
-        account = import.user.email.to_s.strip.downcase
+        account = import.user.verified_email.to_s.strip.downcase
         account.present? && account == import.verification["signer_email"].to_s.strip.downcase
       end
 

@@ -20,6 +20,9 @@ class NdaSignature < ApplicationRecord
   validates :document_sha256, format: { with: /\A[0-9a-f]{64}\z/ }, allow_nil: true
   validates :signed_name, length: { maximum: 200 }
   validates :cosigner_signed_name, length: { maximum: 200 }, allow_nil: true
+  validates :cosigner_email, format: { with: URI::MailTo::EMAIL_REGEXP }, length: { maximum: 254 }, allow_blank: true
+
+  before_validation { self.cosigner_email = cosigner_email.to_s.strip.downcase.presence }
 
   with_options if: :native? do
     validate :acceptable_identity_video

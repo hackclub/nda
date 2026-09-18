@@ -41,6 +41,11 @@
         <%= form.submit "Confirm", class: "button button-primary" %>
       </div>
     <% end %>
+    <% if LegacyNda::EmailChallenge.resendable?(@import) %>
+      <%= button_to "Send a fresh code", resend_challenge_legacy_nda_import_path, class: "button button-secondary" %>
+    <% else %>
+      <p class="recorder-note">A fresh code can be requested after a couple of minutes.</p>
+    <% end %>
 
   <% elsif @import && (@import.pending? || @import.verifying?) %>
     <% if @import.source_airtable? %>

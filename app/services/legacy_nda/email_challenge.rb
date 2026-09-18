@@ -1,6 +1,7 @@
 module LegacyNda
   class EmailChallenge
     KEY_SALT = "legacy nda email challenge".freeze
+    RESEND_INTERVAL = 2.minutes
 
     class TooManyAttempts < StandardError; end
 
@@ -18,13 +19,20 @@ module LegacyNda
         import
       end
 
+      def resendable?(import)
+        import.challenge_pending? && import.challenge_email.present? && import.updated_at < RESEND_INTERVAL.ago
+      end
+
       def verify(import, code)
         return false unless import.challenge_live?
 
         import.increment!(:challenge_attempts)
         matched = ActiveSupport::SecurityUtils.secure_compare(import.challenge_digest, digest(code.to_s.strip))
-        import.update!(challenge_digest: nil, challenge_expires_at: nil) if matched
-        matched
+        return false unless matched
+
+        yield if block_given?
+        import.update!(challenge_digest: nil, challenge_expires_at: nil)
+        true
       end
 
       private

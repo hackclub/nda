@@ -44,8 +44,8 @@ class LoopsClient
         ENDPOINT.host, ENDPOINT.port, use_ssl: true, open_timeout: 5, read_timeout: 10
       ) { |http| http.request(request) }
       parse_response(response)
-    rescue Timeout::Error, SocketError, SystemCallError => error
-      raise TransientError, "Loops is unavailable: #{error.message}"
+    rescue Timeout::Error, SocketError, SystemCallError, EOFError, OpenSSL::SSL::SSLError => error
+      raise TransientError, "Loops is unavailable: #{error.class}"
     end
 
     private
@@ -54,7 +54,7 @@ class LoopsClient
       return JSON.parse(response.body) if response.is_a?(Net::HTTPSuccess)
 
       code = response.code.to_i
-      error_class = code == 429 || code >= 500 ? TransientError : Error
+      error_class = code == 408 || code == 429 || code >= 500 ? TransientError : Error
       raise error_class, "Loops returned HTTP #{response.code}"
     rescue JSON::ParserError
       raise TransientError, "Loops returned an invalid response"

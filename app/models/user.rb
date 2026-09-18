@@ -11,15 +11,22 @@ class User < ApplicationRecord
   with_options if: :signing_details_present? do
     validates :legal_first_name, :legal_last_name, :email, :birthdate, :address_line_1,
       :city, :region, :postal_code, :country, presence: true
+    validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, length: { maximum: 254 }, allow_blank: true
     validates :country, inclusion: { in: Country::NAMES }, allow_blank: true
     validate :birthdate_is_in_the_past
   end
 
-  before_validation { self.slack_id = slack_id.to_s.upcase }
+  before_validation do
+    self.slack_id = slack_id.to_s.upcase
+    self.email = email.to_s.strip.downcase.presence
+    self.verified_email = verified_email.to_s.strip.downcase.presence
+  end
 
   def self.admin_slack_ids
     ENV["ADMIN_SLACK_IDS"].to_s.upcase.split(",").map(&:strip).compact_blank
   end
+
+  def admin_access? = admin? && self.class.admin_slack_ids.include?(slack_id)
 
   def legal_name
     [ legal_first_name, legal_last_name ].compact_blank.join(" ")

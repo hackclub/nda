@@ -25,5 +25,6 @@ module Nda
     # Identity videos are never transformed, and SSE-C objects cannot be analyzed by Active Storage.
     config.active_storage.variant_processor = :disabled
     config.active_storage.analyzers = []
+    config.active_storage.draw_routes = false
   end
 end

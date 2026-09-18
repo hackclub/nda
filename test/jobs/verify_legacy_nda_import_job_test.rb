@@ -60,6 +60,16 @@ class VerifyLegacyNdaImportJobTest < ActiveJob::TestCase
     assert_equal [ "personal@example.com" ], sent_mail_for(:import_challenge).map { _1[:to] }
   end
 
+  test "changing the contact email cannot bypass the ownership challenge" do
+    @user.update!(email: "personal@example.com")
+
+    import = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "personal@example.com"))
+
+    assert_predicate import, :challenge_pending?
+    assert_nil import.nda_signature
+    assert_equal "ada@example.com", @user.reload.verified_email
+  end
+
   test "the challenge code never reaches the database in the clear" do
     import = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "personal@example.com"))
     code = sent_mail_for(:import_challenge).first[:data_variables]["challenge_code"]
@@ -115,7 +125,7 @@ class VerifyLegacyNdaImportJobTest < ActiveJob::TestCase
   test "rejects a second claim on an envelope somebody already holds" do
     verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "ada@example.com"))
 
-    users(:two).update!(email: "ada@example.com")
+    users(:two).update!(email: "ada@example.com", verified_email: "ada@example.com")
     second = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "ada@example.com"), user: users(:two))
 
     assert_predicate second, :rejected?
@@ -127,7 +137,7 @@ class VerifyLegacyNdaImportJobTest < ActiveJob::TestCase
     first = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "ada@example.com"))
     first.nda_signature.update!(verification_state: "rejected", legacy_envelope_id: nil, legacy_document_sha256: nil)
 
-    users(:two).update!(email: "ada@example.com")
+    users(:two).update!(email: "ada@example.com", verified_email: "ada@example.com")
     second = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "ada@example.com"), user: users(:two))
 
     assert_predicate second, :approved?

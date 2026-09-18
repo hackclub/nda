@@ -13,10 +13,14 @@ class Admin::LegacyNdaImportsControllerTest < ActionController::TestCase
   setup do
     @admin = users(:two)
     @admin.update!(admin: true)
+    @previous_admins = ENV["ADMIN_SLACK_IDS"]
+    ENV["ADMIN_SLACK_IDS"] = @admin.slack_id
     session[:user_id] = @admin.id
     @signature = create_legacy_signature(users(:one), verification_state: "needs_review")
     @import = users(:one).legacy_nda_imports.create!(state: "needs_review", nda_signature: @signature)
   end
+
+  teardown { @previous_admins.nil? ? ENV.delete("ADMIN_SLACK_IDS") : ENV["ADMIN_SLACK_IDS"] = @previous_admins }
 
   test "turns away a member who is not an admin" do
     session[:user_id] = users(:one).id
