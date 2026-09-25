@@ -41,7 +41,7 @@ class CosignaturesControllerTest < ActionDispatch::IntegrationTest
   test "the token is kept out of referrers and search engines" do
     get cosign_path(@token)
 
-    assert_equal "no-referrer", response.headers["Referrer-Policy"]
+    assert_equal "same-origin", response.headers["Referrer-Policy"]
     assert_equal "noindex, nofollow", response.headers["X-Robots-Tag"]
   end
 

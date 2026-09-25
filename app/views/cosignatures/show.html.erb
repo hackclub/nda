@@ -1,29 +1,21 @@
 <% content_for :title, "Co-sign a Hack Club NDA" %>
 <section class="form-shell cosign">
-  <div class="form-card">
+  <%= form_with url: cosign_path(params[:token]), class: "form-card" do |form| %>
     <h1>Your signature is needed</h1>
-    <p class="lede"><strong><%= @signature.user.legal_name %></strong> is about to get access to a Hack Club
-      system that holds sensitive data, and has signed the agreement below. Because they're under 18, we
-      need a parent or guardian to co-sign it as well before it is official.</p>
+    <p class="lede"><strong><%= @signature.user.legal_name %></strong> has signed the Hack Club NDA below.
+      Because they're under 18, a parent or guardian needs to sign it too.</p>
     <dl class="cosign-summary">
       <div><dt>Signed by</dt><dd><%= @signature.signed_name %></dd></div>
       <div><dt>Signed on</dt><dd><time datetime="<%= @signature.signed_at.iso8601 %>" data-local-time><%= @signature.signed_at.to_fs(:long) %></time></dd></div>
-      <div><dt>Co-signer</dt><dd><%= @signature.cosigner_name %></dd></div>
       <div><dt>Document version</dt><dd><%= @signature.document_version %></dd></div>
     </dl>
-    <p class="recorder-note">This link was sent to you because <%= @signature.user.legal_name %> gave us this
-      address. If you weren't expecting it, you can simply ignore it &mdash; nothing happens until you sign.</p>
-  </div>
-  <%= form_with url: cosign_path(params[:token]), class: "wizard-form" do |form| %>
-    <div class="form-card">
-      <p class="lede">Please read the complete agreement and sign when you're ready.</p>
-      <%= render "nda_signatures/document" %>
-      <label>Type your full name *<small>Exactly as shown above: <%= @signature.cosigner_name %></small>
-        <%= text_field_tag :cosigner_signed_name, params[:cosigner_signed_name], required: true, autocomplete: "name" %></label>
-      <label class="check-row"><%= check_box_tag :accepted, "1", false, required: true %><span>I am the parent or
-        legal guardian of <%= @signature.user.legal_name %>, I have read and agree to this Mutual Non-Disclosure
-        Agreement, and I intend this electronic signature to be binding.</span></label>
-      <%= form.submit "Sign as co-signer", class: "button button-primary" %>
-    </div>
+    <%= render "nda_signatures/document" %>
+    <label>Type your full name *<small>Exactly as shown: <%= @signature.cosigner_name %></small>
+      <%= text_field_tag :cosigner_signed_name, params[:cosigner_signed_name], required: true, autocomplete: "name" %></label>
+    <label class="check-row"><%= check_box_tag :accepted, "1", false, required: true %><span>I am the parent or
+      legal guardian of <%= @signature.user.legal_name %>, I have read and agree to this Mutual Non-Disclosure
+      Agreement, and I intend this electronic signature to be binding.</span></label>
+    <%= form.submit "Sign as co-signer", class: "button button-primary" %>
+    <p class="recorder-note">Weren't expecting this? You can ignore it. Nothing happens unless you sign.</p>
   <% end %>
 </section>

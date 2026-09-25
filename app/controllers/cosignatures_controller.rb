@@ -1,5 +1,5 @@
 class CosignaturesController < ApplicationController
-  before_action :no_referrer
+  before_action :private_headers
 
   def show
     @signature = Cosignature.find(params[:token])
@@ -33,8 +33,10 @@ class CosignaturesController < ApplicationController
     render :show, status: :unprocessable_entity
   end
 
-  def no_referrer
-    response.set_header("Referrer-Policy", "no-referrer")
+  # The token is in the URL, so keep it from leaking to other origins. Not "no-referrer": that makes the
+  # browser send `Origin: null` on the signing POST, which Rails' forgery protection rejects with a 422.
+  def private_headers
+    response.set_header("Referrer-Policy", "same-origin")
     response.set_header("X-Robots-Tag", "noindex, nofollow")
   end
 end

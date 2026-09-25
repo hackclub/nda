@@ -290,7 +290,9 @@ blockquote li + li { margin-top: 10px; }
 .secondary-path { margin: 18px 0 0; text-align: center; font-size: 13px; color: var(--muted); }
 .secondary-path a { color: inherit; text-decoration: underline; }
 .legacy-import dl { margin-top: 18px; }
-.cosign .form-card + .form-card { margin-top: 24px; }
+.cosign { margin-top: 60px; }
+.cosign .recorder-note { margin-top: 20px; }
+@media (max-width: 760px) { .cosign { margin-top: 42px; } }
 
 .review-queue h2 { font-size: 18px; margin: 28px 0 12px; }
 .review-queue h2 small { font-weight: 400; color: var(--muted); font-size: 13px; }

@@ -1,9 +1,9 @@
 <Style backgroundColor="#ffffff" bodyColor="#ffffff" bodyXPadding="24" bodyYPadding="32" textBaseColor="#17202a" textLinkColor="#ec3750" buttonBodyColor="#ec3750" buttonTextColor="#ffffff" buttonBorderRadius="6" />
-<H3>Hack Club</H3>
-<H1>Confirm your email address</H1>
-<Paragraph fontSize="16" lineHeight="165">Someone is trying to link an existing Hack Club NDA to this email address. Enter this code to confirm it's you:</Paragraph>
-<H1>{data.challenge_code}</H1>
-<Paragraph fontSize="16" lineHeight="165">This code expires in {data.challenge_expiresIn}.</Paragraph>
-<Paragraph fontSize="14" lineHeight="160">If you didn't ask for this, you can safely ignore this email — without the code, nothing happens. Never share this code with anyone.</Paragraph>
-<Divider />
+<H3 paddingBottom="8">Hack Club</H3>
+<H1 paddingBottom="16">Confirm your email address</H1>
+<Paragraph fontSize="16" lineHeight="165" paddingBottom="16">Someone is trying to link an existing Hack Club NDA to this email address. Enter this code to confirm it's you:</Paragraph>
+<H1 paddingBottom="16">{data.challenge_code}</H1>
+<Paragraph fontSize="16" lineHeight="165" paddingBottom="16">This code expires in {data.challenge_expiresIn}.</Paragraph>
+<Paragraph fontSize="14" lineHeight="160" paddingBottom="8">If you didn't ask for this, you can safely ignore this email — without the code, nothing happens. Never share this code with anyone.</Paragraph>
+<Divider paddingTop="16" paddingBottom="16" />
 <Paragraph fontSize="12" lineHeight="170"><Strong>The Hack Foundation</Strong>, a 501(c)(3) nonprofit<Br />212 Battery St., Shelburne, VT 05401, USA<Br />This message concerns a legal agreement. Keep it for your records.</Paragraph>

@@ -1,10 +1,10 @@
 <Style backgroundColor="#ffffff" bodyColor="#ffffff" bodyXPadding="24" bodyYPadding="32" textBaseColor="#17202a" textLinkColor="#ec3750" buttonBodyColor="#ec3750" buttonTextColor="#ffffff" buttonBorderRadius="6" />
-<H3>Hack Club</H3>
-<H1>Your NDA is signed</H1>
-<Paragraph fontSize="16" lineHeight="165">Hi {data.signer_fullName},</Paragraph>
-<Paragraph fontSize="16" lineHeight="165">Your Hack Club Contributor Non-Disclosure Agreement is signed and on file as of {data.nda_signedOn}. You can download a PDF copy any time from your NDA page.</Paragraph>
-<Button href="{data.nda_agreementUrl}">View your agreement</Button>
-<Paragraph fontSize="13" lineHeight="160">Or paste this link into your browser:<Br />{data.nda_agreementUrl}</Paragraph>
-<Paragraph fontSize="14" lineHeight="160">Thanks for taking this seriously — keeping other people's data safe is a real responsibility.</Paragraph>
-<Divider />
+<H3 paddingBottom="8">Hack Club</H3>
+<H1 paddingBottom="16">Your NDA is signed</H1>
+<Paragraph fontSize="16" lineHeight="165" paddingBottom="16">Hi {data.signer_fullName},</Paragraph>
+<Paragraph fontSize="16" lineHeight="165" paddingBottom="16">Your Hack Club Contributor Non-Disclosure Agreement is signed and on file as of {data.nda_signedOn}. You can download a PDF copy any time from your NDA page.</Paragraph>
+<Button paddingTop="8" paddingBottom="24" href="{data.nda_agreementUrl}">View your agreement</Button>
+<Paragraph fontSize="13" lineHeight="160" paddingBottom="16">Or paste this link into your browser:<Br />{data.nda_agreementUrl}</Paragraph>
+<Paragraph fontSize="14" lineHeight="160" paddingBottom="8">Thanks for taking this seriously — keeping other people's data safe is a real responsibility.</Paragraph>
+<Divider paddingTop="16" paddingBottom="16" />
 <Paragraph fontSize="12" lineHeight="170"><Strong>The Hack Foundation</Strong>, a 501(c)(3) nonprofit<Br />212 Battery St., Shelburne, VT 05401, USA<Br />This message concerns a legal agreement. Keep it for your records.</Paragraph>
