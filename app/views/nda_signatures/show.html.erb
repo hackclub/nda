@@ -45,12 +45,13 @@
       <div><dt>Co-signer</dt><dd><%= @signature.cosigner_name %> (<%= @signature.cosigner_email %>)</dd></div>
       <div><dt>Status</dt><dd>Waiting for your co-signer to sign</dd></div>
     </dl>
-    <p class="recorder-note">Nothing shows as signed until they do. Check their spam folder if it hasn't
-      turned up, or send it again using the button below.</p>
     <% if Cosignature.resendable?(@signature) %>
-      <%= button_to "Resend the link", resend_cosigner_invite_nda_signature_path, class: "button button-primary" %>
+      <%= form_with url: resend_cosigner_invite_nda_signature_path, id: "resend-cosigner-invite" do %><% end %>
+      <p class="recorder-note">Nothing shows as signed until they do. Check their spam folder if it hasn't
+        turned up, or <button type="submit" form="resend-cosigner-invite" class="inline-link">send the link again</button>.</p>
     <% else %>
-      <p class="recorder-note">We just sent one, give it a couple of minutes before trying again.</p>
+      <p class="recorder-note">Nothing shows as signed until they do. We just sent the link, so give it a couple
+        of minutes to turn up and check their spam folder.</p>
     <% end %>
     <%= render "document", css: "print-contract", signature: @signature %>
   </section>

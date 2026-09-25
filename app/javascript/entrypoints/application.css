@@ -145,6 +145,7 @@ blockquote li + li { margin-top: 10px; }
 .remove-file { margin: 10px 0 0 auto; padding: 0; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 13px; font-weight: 700; text-decoration: underline; cursor: pointer; }
 .recorder-note { margin: 12px 0 0; color: var(--muted); font-size: 13px; }
 .recorder-note a { color: var(--ink); font-weight: 700; }
+.inline-link { padding: 0; border: 0; background: none; color: var(--ink); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
 .validation-note { margin-top: 16px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .validation-note span { margin-right: 6px; color: var(--red); }
 .admin-override { margin: 24px 0; padding: 18px 20px; border: 1px solid #d6a72c; border-radius: 8px; background: #fff8df; }
