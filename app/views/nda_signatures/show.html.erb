@@ -109,7 +109,10 @@
         <%= render "document" %>
         <label>Type your full legal name *<%= text_field_tag :signed_name, @signed_name, required: true, autocomplete: "name" %></label>
         <label class="check-row"><%= check_box_tag :accepted, "1", false, required: true %><span>I have read and agree to this Mutual Non-Disclosure Agreement and intend this electronic signature to be binding.</span></label>
-        <p class="processing-status" data-processing-status role="status" hidden><strong>Uploading your video…</strong> Once the upload finishes, you can close this page. We'll process it in the background and keep you updated.</p>
+        <div class="processing-status" data-processing-status hidden>
+          <p role="status"><strong data-upload-label>Uploading your video…</strong> <span data-upload-detail>Keep this page open until the upload finishes. After that you can close it, and we'll let you know once it's been processed.</span></p>
+          <progress max="100" value="0" data-upload-progress aria-label="Upload progress"></progress>
+        </div>
         <div class="button-row"><button type="button" class="button button-secondary" data-back>Back</button><%= form.submit "Submit video & sign", class: "button button-primary", data: { submit_label: true } %></div>
       </section>
     <% end %>

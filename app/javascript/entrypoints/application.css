@@ -165,7 +165,26 @@ blockquote li + li { margin-top: 10px; }
 .check-row { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; font-weight: 400; line-height: 1.5; }
 .check-row input { width: 17px; height: 17px; margin: 2px 0 0; accent-color: var(--red); }
 .processing-status { margin: 24px 0 0; padding: 14px 16px; border-radius: 8px; background: #e9f7f1; color: #126746; font-size: 14px; line-height: 1.5; }
-.processing-status strong { display: block; }
+.processing-status p { margin: 0; }
+.processing-status strong { display: block; font-variant-numeric: tabular-nums; }
+.processing-status progress {
+  display: block; width: 100%; height: 8px; margin-top: 12px; overflow: hidden;
+  border: 0; border-radius: 999px; background: #c9eadb; color: #13875d; appearance: none;
+}
+.processing-status progress::-webkit-progress-bar { background: #c9eadb; }
+.processing-status progress::-webkit-progress-value { background: #13875d; border-radius: 999px; transition: width .2s; }
+.processing-status progress::-moz-progress-bar { background: #13875d; border-radius: 999px; }
+/* No value means the upload is done and the server is still saving: sweep a bar across instead. */
+.processing-status progress:indeterminate {
+  background: linear-gradient(90deg, transparent 0 35%, #13875d 35% 65%, transparent 65%) #c9eadb 0 0 / 300% 100%;
+  animation: upload-sweep 1.1s linear infinite;
+}
+.processing-status progress:indeterminate::-webkit-progress-bar { background: transparent; }
+.processing-status progress:indeterminate::-moz-progress-bar { background: transparent; }
+.processing-status.is-failed { background: #fdecef; color: #a3182f; }
+.processing-status.is-failed progress { display: none; }
+@keyframes upload-sweep { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .processing-status progress:indeterminate { animation: none; background-position: 50% 0; } }
 
 .receipt { max-width: 840px; margin: 60px auto 100px; }
 .receipt h1 { font-size: 44px; }
@@ -230,6 +249,13 @@ blockquote li + li { margin-top: 10px; }
   .button-dark { background: #f5f3f7; color: #18171d; }
   .flash-notice { background: #183a30; color: #8fe3c1; }
   .flash-alert { background: #422329; color: #ffadb8; }
+  .processing-status { background: #183a30; color: #8fe3c1; }
+  .processing-status progress { background-color: #25574a; }
+  .processing-status progress::-webkit-progress-bar { background-color: #25574a; }
+  .processing-status progress::-webkit-progress-value { background: #4fd1a0; }
+  .processing-status progress::-moz-progress-bar { background: #4fd1a0; }
+  .processing-status progress:indeterminate { background-image: linear-gradient(90deg, transparent 0 35%, #4fd1a0 35% 65%, transparent 65%); }
+  .processing-status.is-failed { background: #422329; color: #ffadb8; }
   .cosigner-fields { background: #2d2024; }
   .progress-step { color: #8f8b97; }
   label small { color: var(--muted); }

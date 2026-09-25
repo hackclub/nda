@@ -172,12 +172,52 @@ if (wizard) {
   form.elements["user[birthdate]"].addEventListener("change", updatePledge)
   fileInput.addEventListener("change", updateFile)
   removeFile.addEventListener("click", () => { fileInput.value = ""; updateFile() })
-  form.addEventListener("submit", () => {
-    form.setAttribute("aria-busy", "true")
-    wizard.querySelector("[data-processing-status]").hidden = false
-    const submit = form.querySelector("[data-submit-label]")
-    submit.disabled = true
-    submit.value = "Uploading video…"
+  const uploadStatus = wizard.querySelector("[data-processing-status]")
+  const uploadLabel = uploadStatus.querySelector("[data-upload-label]"), uploadDetail = uploadStatus.querySelector("[data-upload-detail]")
+  const uploadProgress = uploadStatus.querySelector("[data-upload-progress]"), defaultUploadDetail = uploadDetail.textContent
+  const submit = form.querySelector("[data-submit-label]"), submitBack = submit.parentElement.querySelector("[data-back]")
+  const setUploading = uploading => {
+    form.toggleAttribute("aria-busy", uploading)
+    submit.disabled = submitBack.disabled = uploading
+    submit.value = uploading ? "Uploading video…" : "Submit video & sign"
+  }
+  const uploadFailed = () => {
+    setUploading(false)
+    uploadStatus.classList.add("is-failed")
+    uploadLabel.textContent = "The upload didn't go through."
+    uploadDetail.textContent = "Check your connection and try again. Your answers are still filled in."
+  }
+  form.addEventListener("submit", event => {
+    setUploading(true)
+    uploadStatus.hidden = false
+    uploadStatus.classList.remove("is-failed")
+    uploadLabel.textContent = "Uploading your video…"
+    uploadDetail.textContent = defaultUploadDetail
+    uploadProgress.value = 0
+
+    // A plain form submit reports no progress, so send it ourselves. Every outcome of `create` is a redirect, which
+    // the request follows; the signature page answers an XHR with an empty 204 and keeps the flash, so navigating to
+    // where the request ended up shows the page as a normal submit would have.
+    event.preventDefault()
+    const request = new XMLHttpRequest()
+    request.open("POST", form.action)
+    request.setRequestHeader("X-Requested-With", "XMLHttpRequest")
+    request.upload.addEventListener("progress", ({ lengthComputable, loaded, total }) => {
+      if (!lengthComputable) return
+      const percent = Math.round((loaded / total) * 100)
+      uploadProgress.value = percent
+      uploadLabel.textContent = `Uploading your video… ${percent}%`
+    })
+    request.upload.addEventListener("load", () => {
+      uploadProgress.removeAttribute("value")
+      uploadLabel.textContent = "Saving your video…"
+    })
+    request.addEventListener("load", () => {
+      if (request.status >= 400) return uploadFailed()
+      window.location.replace(request.responseURL || window.location.href)
+    })
+    request.addEventListener("error", uploadFailed)
+    request.send(new FormData(form))
   })
 }
 

@@ -5,6 +5,37 @@ class NdaSignaturesControllerTest < ActionDispatch::IntegrationTest
     get nda_signature_url
     assert_redirected_to root_url
   end
+
+  test "keeps the flash for the page load that follows an upload XHR" do
+    with_auth do
+      get login_url
+      get oauth_callback_url(code: "auth-code", state: session[:oauth_state])
+    end
+
+    post nda_signature_url, params: { accepted: "0" }, xhr: true
+    assert_redirected_to nda_signature_path
+    follow_redirect!(headers: { "X-Requested-With" => "XMLHttpRequest" })
+    assert_response :no_content
+
+    get nda_signature_url
+    assert_select ".flash-alert", text: "You must agree to the NDA before signing."
+  end
+
+  private
+
+  def with_auth
+    singleton = HackClubAuth.singleton_class
+    originals = { authorization_url: singleton.instance_method(:authorization_url),
+                  identity_for: singleton.instance_method(:identity_for) }
+    singleton.define_method(:authorization_url) { |state:| "https://auth.example.com/?state=#{state}" }
+    singleton.define_method(:identity_for) do |_code|
+      { "id" => "ident!one", "slack_id" => "U0123ABCDE", "first_name" => "Ada", "last_name" => "Lovelace",
+        "primary_email" => "ada@example.com" }
+    end
+    yield
+  ensure
+    originals.each { |name, method| singleton.define_method(name, method) }
+  end
 end
 
 class NdaSignaturesControllerPdfTest < ActionController::TestCase
