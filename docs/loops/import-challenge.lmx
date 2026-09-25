@@ -1,9 +1,9 @@
-<Style backgroundColor="#ffffff" bodyColor="#ffffff" bodyXPadding="24" bodyYPadding="32" textBaseColor="#17202a" textLinkColor="#ec3750" buttonBodyColor="#ec3750" buttonTextColor="#ffffff" buttonBorderRadius="6" />
+<Style backgroundColor="#ffffff" backgroundXPadding="0" backgroundYPadding="0" bodyColor="#ffffff" bodyXPadding="24" bodyYPadding="32" bodyFontFamily="Inter" bodyFontCategory="sans-serif" borderColor="" borderWidth="0" borderRadius="0" buttonBodyColor="#ec3750" buttonBodyXPadding="16" buttonBodyYPadding="12" buttonBorderColor="" buttonBorderWidth="0" buttonBorderRadius="6" buttonTextColor="#ffffff" buttonTextFormat="0" buttonTextFontSize="16" dividerColor="" dividerBorderWidth="1" textBaseColor="#17202a" textBaseFontSize="14" textBaseLineHeight="150" textBaseLetterSpacing="0" textLinkColor="#ec3750" heading1Color="" heading1FontSize="28" heading1LineHeight="125" heading1LetterSpacing="0" heading2Color="" heading2FontSize="24" heading2LineHeight="125" heading2LetterSpacing="0" heading3Color="" heading3FontSize="20" heading3LineHeight="125" heading3LetterSpacing="0" />
 <H3 paddingBottom="8">Hack Club</H3>
 <H1 paddingBottom="16">Confirm your email address</H1>
 <Paragraph fontSize="16" lineHeight="165" paddingBottom="16">Someone is trying to link an existing Hack Club NDA to this email address. Enter this code to confirm it's you:</Paragraph>
 <H1 paddingBottom="16">{data.challenge_code}</H1>
 <Paragraph fontSize="16" lineHeight="165" paddingBottom="16">This code expires in {data.challenge_expiresIn}.</Paragraph>
 <Paragraph fontSize="14" lineHeight="160" paddingBottom="8">If you didn't ask for this, you can safely ignore this email — without the code, nothing happens. Never share this code with anyone.</Paragraph>
-<Divider paddingTop="16" paddingBottom="16" />
+<Divider width="100" paddingTop="16" paddingBottom="16" />
 <Paragraph fontSize="12" lineHeight="170"><Strong>The Hack Foundation</Strong>, a 501(c)(3) nonprofit<Br />212 Battery St., Shelburne, VT 05401, USA<Br />This message concerns a legal agreement. Keep it for your records.</Paragraph>
