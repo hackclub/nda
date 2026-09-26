@@ -6,6 +6,7 @@ module LegacyNda
     ATTACHMENT_HOSTS = %w[.airtableusercontent.com .airtable.com].freeze
 
     Found = Data.define(:id, :email, :name, :signed_at, :document_url, :document_filename, :document_bytes)
+    class DocumentTooLarge < StandardError; end
 
     class << self
       def signed_for(email)
@@ -36,10 +37,21 @@ module LegacyNda
         uri = URI(record.document_url.to_s)
         return nil unless uri.is_a?(URI::HTTPS) && uri.host.to_s.end_with?(*ATTACHMENT_HOSTS)
 
-        response = Net::HTTP.start(
-          uri.host, uri.port, use_ssl: true, open_timeout: 5, read_timeout: 30
-        ) { |http| http.request(Net::HTTP::Get.new(uri)) }
-        response.is_a?(Net::HTTPSuccess) ? response.body : nil
+        bytes = +"".b
+        Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 5, read_timeout: 30) do |http|
+          http.request(Net::HTTP::Get.new(uri)) do |response|
+            next unless response.is_a?(Net::HTTPSuccess)
+
+            response.read_body do |chunk|
+              raise DocumentTooLarge if bytes.bytesize + chunk.bytesize > LegacyNdaImport::MAX_DOCUMENT_BYTES
+
+              bytes << chunk
+            end
+          end
+        end
+        bytes.presence
+      rescue DocumentTooLarge
+        nil
       rescue URI::InvalidURIError, Timeout::Error, SocketError, SystemCallError => error
         Rails.logger.warn("Airtable document #{record.id} could not be fetched: #{error.class}")
         nil

@@ -56,7 +56,7 @@ class User < ApplicationRecord
   def age(on: Date.current)
     return unless birthdate
 
-    on.year - birthdate.year - (on.yday < birthdate.yday ? 1 : 0)
+    on.year - birthdate.year - (([ on.month, on.day ] <=> [ birthdate.month, birthdate.day ]).negative? ? 1 : 0)
   end
 
   def location_for_pledge

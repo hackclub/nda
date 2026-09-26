@@ -24,15 +24,19 @@ module LegacyNda
       end
 
       def verify(import, code)
-        return false unless import.challenge_live?
-
-        import.increment!(:challenge_attempts)
-        matched = ActiveSupport::SecurityUtils.secure_compare(import.challenge_digest, digest(code.to_s.strip))
-        return false unless matched
-
-        yield if block_given?
-        import.update!(challenge_digest: nil, challenge_expires_at: nil)
-        true
+        import.with_lock do
+          if import.challenge_live?
+            import.increment!(:challenge_attempts)
+            matched = ActiveSupport::SecurityUtils.secure_compare(import.challenge_digest, digest(code.to_s.strip))
+            if matched
+              yield if block_given?
+              import.update!(challenge_digest: nil, challenge_expires_at: nil)
+            end
+            matched
+          else
+            false
+          end
+        end
       end
 
       private

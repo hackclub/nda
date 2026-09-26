@@ -30,6 +30,14 @@ class UserTest < ActiveSupport::TestCase
     assert_equal 25, user.age(on: Date.new(2025, 1, 2))
   end
 
+  test "does not count a leap day as the birthday of someone born on March 1" do
+    user = users(:one)
+    user.birthdate = Date.new(2010, 3, 1)
+
+    assert_equal 17, user.age(on: Date.new(2028, 2, 29))
+    assert_equal 18, user.age(on: Date.new(2028, 3, 1))
+  end
+
   test "reports an approved import when there is no native signature" do
     signature = create_legacy_signature(users(:one))
 

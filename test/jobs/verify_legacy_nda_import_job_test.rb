@@ -114,6 +114,16 @@ class VerifyLegacyNdaImportJobTest < ActiveJob::TestCase
     assert_not LegacyNda::EmailChallenge.verify(import, code)
   end
 
+  test "a stale import cannot bypass the attempt limit" do
+    import = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "personal@example.com"))
+    stale = LegacyNdaImport.find(import.id)
+    code = sent_mail_for(:import_challenge).first[:data_variables]["challenge_code"]
+    LegacyNdaImport::MAX_CHALLENGE_ATTEMPTS.times { LegacyNda::EmailChallenge.verify(import, "000000") }
+
+    assert_not LegacyNda::EmailChallenge.verify(stale, code)
+    assert_equal LegacyNdaImport::MAX_CHALLENGE_ATTEMPTS, stale.reload.challenge_attempts
+  end
+
   test "a code cannot be used twice" do
     import = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "personal@example.com"))
     code = sent_mail_for(:import_challenge).first[:data_variables]["challenge_code"]
