@@ -2,7 +2,7 @@ source "https://rubygems.org"
 
 gem "rails", "~> 8.1.4"
 gem "propshaft"
-gem "pg", "~> 1.5"
+gem "pg", "~> 1.7"
 gem "puma", ">= 5.0"
 gem "vite_rails"
 gem "multipart-post"
