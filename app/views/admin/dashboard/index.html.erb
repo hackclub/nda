@@ -85,33 +85,28 @@
                         <%= button_to "Recheck Airtable (fresh lookup)", recheck_airtable_admin_user_path(user), method: :post, class: "menu-button" %>
                       <% end %>
                       <% if current.nil? && !user.current_nda_required_at? %>
-                        <%= form_with url: require_current_nda_admin_user_path(user), method: :post, data: { confirm: "Move this member to the current NDA flow? Their prior NDA will remain on file." } do |form| %>
-                          <%= form.text_field :reason, required: true, placeholder: "Reason for moving" %>
+                        <%= form_with url: require_current_nda_admin_user_path(user), method: :post, data: { confirm: "Move this member to the current NDA flow? Their prior NDA will remain on file.", reason_prompt: "Reason for moving" } do |form| %>
                           <%= form.submit "Move to current NDA", class: "menu-button" %>
                         <% end %>
                       <% end %>
                       <% if displayed&.native? && displayed.rejected? && displayed.transcript.present? %>
-                        <%= form_with url: admin_nda_signature_path(displayed), method: :patch, data: { confirm: "Force approve this saved recording?" } do |form| %>
-                          <%= form.text_field :reason, required: true, placeholder: "Approval reason" %>
+                        <%= form_with url: admin_nda_signature_path(displayed), method: :patch, data: { confirm: "Force approve this saved recording?", reason_prompt: "Approval reason" } do |form| %>
                           <%= form.submit "Force approve recording", class: "menu-button" %>
                         <% end %>
                       <% elsif displayed&.approved? %>
                         <%= button_to "Sync to Airtable", sync_admin_nda_signature_path(displayed), method: :post, class: "menu-button" %>
                       <% elsif displayed&.legacy? %>
-                        <%= form_with url: admin_nda_signature_path(displayed), method: :patch, data: { confirm: "Force approve this legacy NDA?" } do |form| %>
-                          <%= form.text_field :reason, required: true, placeholder: "Approval reason" %>
+                        <%= form_with url: admin_nda_signature_path(displayed), method: :patch, data: { confirm: "Force approve this legacy NDA?", reason_prompt: "Approval reason" } do |form| %>
                           <%= form.submit "Force approve", class: "menu-button" %>
                         <% end %>
                       <% end %>
                       <% if current %>
-                        <%= form_with url: reset_nda_admin_user_path(user), method: :post, data: { confirm: "Reset this current NDA? The member will be able to sign again." } do |form| %>
-                          <%= form.text_field :reason, required: true, placeholder: "Reset reason" %>
+                        <%= form_with url: reset_nda_admin_user_path(user), method: :post, data: { confirm: "Reset this current NDA? The member will be able to sign again.", reason_prompt: "Reset reason" } do |form| %>
                           <%= form.submit "Reset current NDA", class: "menu-button danger-text" %>
                         <% end %>
                       <% end %>
                       <% if displayed %>
-                        <%= form_with url: admin_nda_signature_path(displayed), method: :delete, data: { confirm: "Permanently destroy this NDA and its linked import?" } do |form| %>
-                          <%= form.text_field :reason, required: true, placeholder: "Destruction reason" %>
+                        <%= form_with url: admin_nda_signature_path(displayed), method: :delete, data: { confirm: "Permanently destroy this NDA and its linked import?", reason_prompt: "Destruction reason" } do |form| %>
                           <%= form.submit "Destroy record", class: "menu-button danger-text" %>
                         <% end %>
                       <% end %>

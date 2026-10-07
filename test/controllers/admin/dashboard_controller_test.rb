@@ -52,9 +52,9 @@ class Admin::DashboardControllerTest < ActionController::TestCase
 
     get :index, params: { query: users(:one).slack_id }
 
-    assert_select "form[action=?]", require_current_nda_admin_user_path(users(:one)) do
+    assert_select "form[action=?][data-reason-prompt='Reason for moving']", require_current_nda_admin_user_path(users(:one)) do
       assert_select "input[type=submit][value='Move to current NDA']"
-      assert_select "input[name=reason][required]"
+      assert_select "input[name=reason]", 0
     end
   end
 

@@ -297,7 +297,12 @@ function initializeAdminMenus() {
 
     panel.querySelectorAll("form").forEach(form => form.addEventListener("submit", async event => {
       event.preventDefault()
-      if (submitting || (form.dataset.confirm && !window.confirm(form.dataset.confirm))) return
+      if (submitting) return
+      let reason
+      if (form.dataset.reasonPrompt) {
+        reason = window.prompt(`${form.dataset.confirm}\n\n${form.dataset.reasonPrompt}`)
+        if (!reason?.trim()) return
+      } else if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) return
       submitting = true
       const status = shell.querySelector(".admin-action-status")
       status.hidden = false
@@ -305,6 +310,7 @@ function initializeAdminMenus() {
       status.textContent = "Submitting…"
       form.setAttribute("aria-busy", "true")
       const body = new FormData(form)
+      if (reason !== undefined) body.set("reason", reason.trim())
       const submitter = event.submitter
       const submitLabel = submitter?.tagName === "INPUT" ? submitter.value : submitter?.textContent
       if (submitter?.tagName === "INPUT") submitter.value = "Submitting…"
