@@ -5,7 +5,7 @@ class ImportAirtableNdaJobTest < ActiveJob::TestCase
     import = users(:one).legacy_nda_imports.create!(source: "airtable")
     singleton = LegacyNda::AirtableImport.singleton_class
     original = singleton.instance_method(:claim!)
-    singleton.define_method(:claim!) { |_| raise AirtableClient::TransientError, "temporary outage" }
+    singleton.define_method(:claim!) { |_, **| raise AirtableClient::TransientError, "temporary outage" }
 
     assert_enqueued_with(job: ImportAirtableNdaJob, args: [ import.id ]) do
       ImportAirtableNdaJob.perform_now(import.id)
@@ -21,7 +21,7 @@ class ImportAirtableNdaJobTest < ActiveJob::TestCase
     called = false
     singleton = LegacyNda::AirtableImport.singleton_class
     original = singleton.instance_method(:claim!)
-    singleton.define_method(:claim!) { |_| called = true }
+    singleton.define_method(:claim!) { |_, **| called = true }
 
     ImportAirtableNdaJob.perform_now(import.id)
 

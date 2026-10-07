@@ -3,8 +3,10 @@ require "digest"
 module LegacyNda
   class AirtableImport
     class << self
-      def claim!(import)
-        record = AirtableRecord.signed_for(import.user.verified_email)
+      def claim!(import, fresh: false)
+        return Claim.reject!(import, "already_covered") if import.user.reportable_nda_signature
+
+        record = AirtableRecord.signed_for(import.user.verified_email, fresh:)
         return settle!(import, record) if record && !taken?(record)
 
         import.update!(state: "email_pending")

@@ -249,6 +249,105 @@ if (resendNote) setTimeout(() => {
   resendNote.remove()
 }, Number(resendNote.dataset.resendIn) * 1000)
 
-document.querySelectorAll("form[data-confirm]").forEach(form => form.addEventListener("submit", event => {
+document.querySelectorAll("form[data-confirm]:not(.admin-actions-panel form)").forEach(form => form.addEventListener("submit", event => {
   if (!window.confirm(form.dataset.confirm)) event.preventDefault()
 }))
+
+
+// Popovers use the browser's top layer so the scrolling table cannot clip them.
+function initializeAdminMenus() {
+  const shell = document.querySelector(".admin-shell")
+  if (!shell) return
+  let submitting = false
+  shell.querySelectorAll(".admin-actions-menu").forEach(menu => {
+    const panel = menu.querySelector(".admin-actions-panel")
+    const summary = menu.querySelector("summary")
+    if (typeof panel.showPopover === "function") {
+      panel.setAttribute("popover", "auto")
+      const position = () => {
+        if (!panel.matches(":popover-open")) return
+        const anchor = summary.getBoundingClientRect()
+        const gap = 8, margin = 12
+        panel.style.maxHeight = `${Math.max(80, window.innerHeight - margin * 2)}px`
+        const bounds = panel.getBoundingClientRect()
+        const below = anchor.bottom + gap
+        const top = below + bounds.height <= window.innerHeight - margin ? below : anchor.top - gap - bounds.height
+        panel.style.left = `${Math.max(margin, Math.min(anchor.right - bounds.width, window.innerWidth - bounds.width - margin))}px`
+        panel.style.top = `${Math.max(margin, Math.min(top, window.innerHeight - bounds.height - margin))}px`
+      }
+      menu.addEventListener("toggle", () => {
+        if (menu.open) {
+          if (!panel.matches(":popover-open")) panel.showPopover()
+          position()
+        } else if (panel.matches(":popover-open")) panel.hidePopover()
+      })
+      panel.addEventListener("toggle", event => {
+        if (event.newState === "closed") menu.open = false
+      })
+      // Capture scroll also covers horizontal movement inside the table.
+      const reposition = () => {
+        if (!menu.isConnected) {
+          window.removeEventListener("resize", reposition)
+          window.removeEventListener("scroll", reposition, true)
+        } else position()
+      }
+      window.addEventListener("resize", reposition)
+      window.addEventListener("scroll", reposition, true)
+    }
+
+    panel.querySelectorAll("form").forEach(form => form.addEventListener("submit", async event => {
+      event.preventDefault()
+      if (submitting || (form.dataset.confirm && !window.confirm(form.dataset.confirm))) return
+      submitting = true
+      const status = shell.querySelector(".admin-action-status")
+      status.hidden = false
+      status.classList.remove("is-error")
+      status.textContent = "Submitting…"
+      form.setAttribute("aria-busy", "true")
+      const body = new FormData(form)
+      const submitter = event.submitter
+      const submitLabel = submitter?.tagName === "INPUT" ? submitter.value : submitter?.textContent
+      if (submitter?.tagName === "INPUT") submitter.value = "Submitting…"
+      else if (submitter) submitter.textContent = "Submitting…"
+      const controls = [...shell.querySelectorAll(".admin-actions-panel input, .admin-actions-panel button")]
+      const enabled = controls.filter(control => !control.disabled)
+      enabled.forEach(control => { control.disabled = true })
+      try {
+        const response = await fetch(form.action, {
+          method: form.method, body, credentials: "same-origin",
+          headers: { "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content }
+        })
+        if (!response.ok) throw new Error("The action could not be completed. Refresh to check the record before trying again.")
+        const page = new DOMParser().parseFromString(await response.text(), "text/html")
+        const updated = page.querySelector(".admin-shell")
+        if (!updated) {
+          window.location.assign(response.url)
+          return
+        }
+        const messages = [...page.querySelectorAll(".flash")].map(flash => flash.textContent.trim())
+        const newStatus = updated.querySelector(".admin-action-status")
+        newStatus.hidden = false
+        newStatus.textContent = messages.join(" ") || "Action completed."
+        newStatus.classList.toggle("is-error", Boolean(page.querySelector(".flash-alert")))
+        if (panel.hasAttribute("popover") && panel.matches(":popover-open")) panel.hidePopover()
+        document.querySelectorAll(".flash").forEach(flash => flash.remove())
+        shell.replaceWith(updated)
+        initializeAdminMenus()
+        newStatus.tabIndex = -1
+        newStatus.focus()
+      } catch (error) {
+        status.classList.add("is-error")
+        status.textContent = "The action could not be confirmed. Refresh to check the record before trying again."
+        status.tabIndex = -1
+        status.focus()
+      } finally {
+        submitting = false
+        form.removeAttribute("aria-busy")
+        if (submitter?.tagName === "INPUT") submitter.value = submitLabel
+        else if (submitter) submitter.textContent = submitLabel
+        enabled.forEach(control => { control.disabled = false })
+      }
+    }))
+  })
+}
+initializeAdminMenus()

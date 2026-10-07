@@ -27,6 +27,7 @@ Rails.application.routes.draw do
       post :sync, on: :member
     end
     resources :users, only: [] do
+      post :recheck_airtable, on: :member
       post :reset_nda, on: :member
       post :require_current_nda, on: :member
     end

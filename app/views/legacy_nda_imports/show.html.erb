@@ -29,7 +29,7 @@
         <%= form.submit "Send me a code", class: "button button-primary" %>
       </div>
     <% end %>
-    <p class="recorder-note">Have the signed PDF instead? <%= link_to "Upload it", legacy_nda_import_path %>.</p>
+    <p class="recorder-note">Have the signed PDF instead? <%= link_to "Upload it", legacy_nda_import_path(upload: 1) %>.</p>
 
   <% elsif @import&.challenge_pending? %>
     <h1>Confirm your email</h1>
@@ -48,6 +48,7 @@
       <p class="recorder-note" data-resend-in="<%= (LegacyNda::EmailChallenge.resendable_at(@import) - Time.current).ceil %>">
         A fresh code can be requested after a couple of minutes.</p>
     <% end %>
+    <p class="recorder-note">Have the signed PDF instead? <%= link_to "Upload it", legacy_nda_import_path(upload: 1) %>.</p>
     <% if @import.source_airtable? %>
       <%= form_with url: change_email_legacy_nda_import_path, id: "change-email" do %><% end %>
       <p class="recorder-note">Wrong address, or nothing arrived?
@@ -55,6 +56,7 @@
     <% end %>
 
   <% elsif @import && (@import.pending? || @import.verifying?) %>
+    <p class="recorder-note">Have the signed PDF instead? <%= link_to "Upload it", legacy_nda_import_path(upload: 1) %>.</p>
     <% if @import.source_airtable? %>
       <h1>Checking our records</h1>
       <p class="processing-status" role="status" data-import-pending>We're looking for an NDA signed

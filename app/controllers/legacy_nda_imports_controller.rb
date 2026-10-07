@@ -6,7 +6,7 @@ class LegacyNdaImportsController < ApplicationController
   TOO_MANY = "Slow down there, you already tried several times today! May I recommend that you just sign a new NDA instead?".freeze
 
   def show
-    @import = current_import
+    @import = current_import unless params[:upload] == "1" && !already_covered?
   end
 
   def create

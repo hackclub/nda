@@ -184,4 +184,24 @@ class LegacyNda::AirtableImportTest < ActiveSupport::TestCase
 
     assert_predicate import.reload, :email_pending?
   end
+  test "fresh lookup uses the corrected live email despite a cached match" do
+    AirtableNdaRecord.create!(airtable_record_id: "recStale", email: @user.verified_email,
+      normalized_email: @user.verified_email, signer_name: "Old match", signed_at: 1.year.ago)
+    AirtableNdaBackfill.create!(completed_at: Time.current)
+    import = import_for
+    with_airtable(rows: [ SIGNED ]) { LegacyNda::AirtableImport.claim!(import, fresh: true) }
+    assert_equal "recSigned", import.reload.nda_signature.airtable_record_id
+  end
+
+  test "fresh lookup still requires the verified email and an unclaimed signed row" do
+    @user.update!(email: "other@example.com")
+    import = import_for
+    with_airtable(rows: [ SIGNED.merge("Email": "other@example.com") ]) do
+      LegacyNda::AirtableImport.claim!(import, fresh: true)
+    end
+    assert_predicate import.reload, :email_pending?
+    create_legacy_signature(users(:two), airtable_record_id: "recSigned")
+    with_airtable(rows: [ SIGNED ]) { LegacyNda::AirtableImport.claim!(import, fresh: true) }
+    assert_nil import.reload.nda_signature
+  end
 end

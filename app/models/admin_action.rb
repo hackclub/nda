@@ -1,12 +1,12 @@
 class AdminAction < ApplicationRecord
-  ACTIONS = %w[force_approve force_sign revoke reset_nda require_current_nda destroy_signature sync_airtable].freeze
+  ACTIONS = %w[force_approve force_sign revoke reset_nda require_current_nda destroy_signature sync_airtable recheck_airtable].freeze
 
   belongs_to :admin_user, class_name: "User"
   belongs_to :target_user, class_name: "User"
 
   validates :action, inclusion: { in: ACTIONS }
   validates :subject_type, :subject_id, presence: true
-  validates :reason, presence: true, unless: -> { action == "sync_airtable" }
+  validates :reason, presence: true, unless: -> { action.in?(%w[sync_airtable recheck_airtable]) }
 
   def self.record!(admin:, target_user:, action:, subject:, reason: nil, details: {})
     create!(admin_user: admin, target_user:, action:, subject_type: subject.class.name,

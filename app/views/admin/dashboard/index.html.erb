@@ -49,6 +49,7 @@
       <% end %>
     </div>
 
+    <p class="admin-action-status" role="status" aria-live="polite" hidden></p>
     <div class="admin-table-wrap">
       <table class="admin-table">
         <thead><tr><th>Member</th><th>Coverage</th><th>Signed</th><th>Airtable</th><th><span class="sr-only">Actions</span></th></tr></thead>
@@ -79,7 +80,10 @@
                 <% if displayed || current.nil? %>
                   <details class="admin-actions-menu">
                     <summary>Manage</summary>
-                    <div>
+                    <div class="admin-actions-panel">
+                      <% unless user.reportable_nda_signature %>
+                        <%= button_to "Recheck Airtable (fresh lookup)", recheck_airtable_admin_user_path(user), method: :post, class: "menu-button" %>
+                      <% end %>
                       <% if current.nil? && !user.current_nda_required_at? %>
                         <%= form_with url: require_current_nda_admin_user_path(user), method: :post, data: { confirm: "Move this member to the current NDA flow? Their prior NDA will remain on file." } do |form| %>
                           <%= form.text_field :reason, required: true, placeholder: "Reason for moving" %>

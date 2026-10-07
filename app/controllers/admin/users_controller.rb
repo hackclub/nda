@@ -1,6 +1,21 @@
 class Admin::UsersController < ApplicationController
   before_action :require_admin
 
+  def recheck_airtable
+    user = User.find(params[:id])
+    return redirect_to admin_root_path, alert: "That member already has NDA coverage." if user.reportable_nda_signature
+    return redirect_to admin_root_path, alert: "Airtable is not configured." unless AirtableClient.configured?
+    return redirect_to admin_root_path, alert: "That member has no verified account email." if user.verified_email.blank?
+
+    import = user.transaction do
+      pending = user.legacy_nda_imports.create!(source: "airtable", ip_address: request.remote_ip)
+      AdminAction.record!(admin: current_user, target_user: user, action: "recheck_airtable", subject: pending)
+      pending
+    end
+    ImportAirtableNdaJob.perform_later(import.id, fresh: true)
+    redirect_to admin_root_path, notice: "Queued a fresh Airtable lookup for #{user.slack_id}. The member can check their import page for the result."
+  end
+
   def require_current_nda
     user = User.find(params[:id])
     return redirect_to admin_root_path, alert: "That member already has the current NDA." if user.signature_for_current_version

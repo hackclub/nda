@@ -1,6 +1,8 @@
 require "test_helper"
+require_relative "../../support/airtable_stub"
 
 class Admin::UsersControllerTest < ActionController::TestCase
+  include AirtableStub
   tests Admin::UsersController
 
   setup do
@@ -61,5 +63,38 @@ class Admin::UsersControllerTest < ActionController::TestCase
       post :reset_nda, params: { id: users(:one).id }
     end
     assert NdaSignature.exists?(signature.id)
+  end
+  test "fresh Airtable recheck queues a lookup and records the admin" do
+    user = users(:one)
+    user.update!(airtable_checked_at: Time.current)
+    with_airtable do
+      assert_enqueued_with(job: ImportAirtableNdaJob, args: ->(args) { args.last == { fresh: true } && LegacyNdaImport.exists?(args.first) }) do
+        post :recheck_airtable, params: { id: user.id }
+      end
+    end
+    import = user.legacy_nda_imports.sole
+    assert_predicate import, :source_airtable?
+    assert_equal "recheck_airtable", AdminAction.last.action
+    assert_equal import.id, AdminAction.last.subject_id
+    assert_redirected_to admin_root_path
+  end
+
+  test "rechecking cannot bypass admin access" do
+    session[:user_id] = users(:one).id
+    assert_no_enqueued_jobs do
+      post :recheck_airtable, params: { id: users(:one).id }
+    end
+    assert_redirected_to root_path
+  end
+
+  test "rechecking refuses existing coverage or a missing verified email" do
+    user = users(:one)
+    create_legacy_signature(user)
+    assert_no_difference("LegacyNdaImport.count") { post :recheck_airtable, params: { id: user.id } }
+    user.nda_signatures.destroy_all
+    user.update!(verified_email: nil)
+    with_airtable do
+      assert_no_difference("LegacyNdaImport.count") { post :recheck_airtable, params: { id: user.id } }
+    end
   end
 end

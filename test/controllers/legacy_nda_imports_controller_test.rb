@@ -233,4 +233,17 @@ class LegacyNdaImportsControllerTest < ActionController::TestCase
       post :change_email
     end
   end
+  test "upload link escapes both email states without changing the existing import" do
+    import = users(:one).legacy_nda_imports.create!(source: "airtable", state: "email_pending")
+    %w[email_pending challenge_pending].each do |state|
+      import.update!(state:)
+      get :show
+      assert_select "a[href=?]", legacy_nda_import_path(upload: 1), text: "Upload it"
+      get :show, params: { upload: "1" }
+      assert_select "input[name=document]"
+      assert_equal state, import.reload.state
+    end
+    post :create, params: { document: upload }
+    assert_predicate users(:one).legacy_nda_imports.order(:created_at).last, :source_upload?
+  end
 end

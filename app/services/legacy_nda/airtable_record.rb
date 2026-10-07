@@ -12,13 +12,13 @@ module LegacyNda
       # The local cache is a snapshot from the last backfill, so a miss is only final where a login
       # must not wait on Airtable (cached_only). A member asking us to look goes to the base, or
       # anyone who signed the old system after the snapshot could never be found.
-      def signed_for(email, cached_only: false)
+      def signed_for(email, cached_only: false, fresh: false)
         address = email.to_s.strip.downcase
         return nil if address.blank?
 
-        cached = AirtableNdaRecord.signed_for(address)
+        cached = AirtableNdaRecord.signed_for(address) unless fresh
         return cached if cached
-        return nil if AirtableNdaRecord.backfill_complete? && (cached_only || !AirtableClient.configured?)
+        return nil if !fresh && AirtableNdaRecord.backfill_complete? && (cached_only || !AirtableClient.configured?)
 
         rows = AirtableClient.records(
           filter: "AND({Signed?}, LOWER({Email}) = #{AirtableClient.quote(address)})",
