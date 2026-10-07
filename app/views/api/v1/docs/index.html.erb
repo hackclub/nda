@@ -15,19 +15,20 @@
       <span class="http-method">GET</span>
       <code>/api/v1/nda_status/:slack_id</code>
     </div>
-    <p>Replace <code>:slack_id</code> with a Slack member ID beginning with <code>U</code> or <code>W</code>. The ID is normalized to uppercase before lookup.</p>
+    <p>Replace <code>:slack_id</code> with a Slack member ID beginning with <code>U</code> or <code>W</code>, or a URL-encoded email address.</p>
+    <pre><code>curl <%= request.base_url %>/api/v1/nda_status/orpheus%40example.com</code></pre>
   </section>
 
   <div class="docs-grid">
     <section class="docs-section docs-request">
       <h2>Request</h2>
-      <p>Send the Slack member ID as the final path segment.</p>
+      <p>Send the Slack member ID or URL-encoded email as the final path segment.</p>
       <pre><code>curl <%= api_v1_nda_status_url(slack_id: "U0123ABCDEF") %></code></pre>
 
       <dl class="docs-parameters">
         <div>
           <dt><code>slack_id</code></dt>
-          <dd>Required path parameter · 9–21 characters</dd>
+          <dd>Required path parameter · Slack ID: 9–21 characters; email: up to 254 characters</dd>
         </div>
       </dl>
     </section>

@@ -38,4 +38,5 @@ you can pull someones nda status via this endpoint:
 
 ```http
 GET /api/v1/nda_status/U0123ABCDEF
+GET /api/v1/nda_status/orpheus%40example.com
 ```

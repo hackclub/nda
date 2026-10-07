@@ -38,7 +38,8 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       get "docs", to: "docs#index", as: :docs
-      get "nda_status/:slack_id", to: "nda_statuses#show", as: :nda_status
+      get "nda_status/:slack_id", to: "nda_statuses#show", as: :nda_status,
+        constraints: { slack_id: /[^\/]+/ }, format: false
     end
   end
 
