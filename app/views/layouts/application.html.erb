@@ -17,5 +17,6 @@
     <% if notice %><div class="flash flash-notice"><%= notice %></div><% end %>
     <% if alert %><div class="flash flash-alert"><%= alert %></div><% end %>
     <main><%= yield %></main>
+    <footer class="site-footer"><%= link_to "Public API", api_v1_docs_path %> · <a href="https://github.com/hackclub/nda">Open Source</a></footer>
   </body>
 </html>

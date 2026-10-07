@@ -60,6 +60,7 @@ button, input { font: inherit; }
 .link-button { padding: 7px 0; border: 0; background: none; color: var(--ink); font-weight: 700; cursor: pointer; }
 .admin-link { color: #b77900; font-weight: 800; text-decoration: none; }
 .admin-link:hover { text-decoration: underline; }
+.site-footer { max-width: 900px; margin: 80px auto 0; padding: 24px 28px 38px; color: #777a85; font-size: 13px; }
 
 .shell { max-width: 900px; margin: auto; padding-left: 28px; padding-right: 28px; }
 .eyebrow { color: var(--red); font-size: 12px; font-weight: 750; }
@@ -196,7 +197,7 @@ blockquote li + li { margin-top: 10px; }
 .signature-line { margin-top: 40px; padding-top: 20px; border-top: 1px solid #bbb; }
 .print-contract { max-height: none; margin-top: 40px; }
 
-.home-page .site-header { display: none; }
+.home-page .site-header, .home-page .site-footer { display: none; }
 .home-page main { min-height: 100vh; }
 .minimal-home { width: min(100%, 820px); min-height: 100vh; margin: 0 auto; padding: 12vh 32px 38px; display: flex; flex-direction: column; }
 .minimal-home-copy { max-width: 680px; }
@@ -206,7 +207,8 @@ blockquote li + li { margin-top: 10px; }
 .minimal-home-button:hover { background: var(--red-dark); }
 .minimal-home-api { margin-top: auto; padding-top: 80px; color: #777a85; font-size: 13px; }
 
-.docs-page .site-header { max-width: 1200px; }
+.docs-page .site-header, .docs-page .site-footer { max-width: 1200px; }
+.docs-page .site-footer, .admin-page .site-footer { margin-top: 0; }
 .docs-shell { width: min(100%, 1200px); margin: 0 auto 100px; padding: 64px 28px 0; }
 .docs-header { margin-bottom: 52px; display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; }
 .docs-header h1 { margin: 8px 0 12px; font-size: 48px; }
@@ -269,7 +271,7 @@ blockquote li + li { margin-top: 10px; }
   .contract { background: var(--paper); color: #e8e5eb; }
   .signature-line { border-color: #5a5661; }
   .minimal-home p { color: #d7d4dc; }
-  .minimal-home-api { color: var(--muted); }
+  .minimal-home-api, .site-footer { color: var(--muted); }
   .http-method { background: #183a30; color: #8fe3c1; }
   .docs-endpoint p code, .docs-section p code { background: #2d2b32; }
   .admin-override { border-color: #6f5a24; background: #332d1d; }
@@ -277,6 +279,7 @@ blockquote li + li { margin-top: 10px; }
 
 @media (max-width: 760px) {
   .site-header { min-height: 64px; padding: 12px 20px; }
+  .site-footer { padding-left: 20px; padding-right: 20px; }
   .account > span { display: none; }
   .form-shell, .shell { padding-left: 20px; padding-right: 20px; }
   .progress { margin: 28px 0 42px; }
@@ -299,7 +302,7 @@ blockquote li + li { margin-top: 10px; }
 
 @media print {
   @page { size: Letter; margin: 0.75in 1in; }
-  .site-header, .flash, .receipt > .button, .receipt > .eyebrow, .receipt > h1, .receipt > p, .receipt > dl, .success-mark { display: none; }
+  .site-header, .site-footer, .flash, .receipt > .button, .receipt > .eyebrow, .receipt > h1, .receipt > p, .receipt > dl, .success-mark { display: none; }
   .receipt { box-shadow: none; padding: 0; margin: 0; border: 0; }
   :root, body { background: #fff; }
   .print-contract { border: 0; padding: 0; margin: 0; max-height: none; overflow: visible; background: #fff; color: #000; }
@@ -336,7 +339,7 @@ blockquote li + li { margin-top: 10px; }
 .review-note, .review-empty { color: var(--muted); font-size: 13px; }
 .review-log { font-size: 13px; color: var(--muted); padding-left: 18px; }
 
-.admin-page .site-header { max-width: 1200px; }
+.admin-page .site-header, .admin-page .site-footer { max-width: 1200px; }
 .admin-shell { width: min(100%, 1200px); margin: 0 auto 100px; padding: 54px 28px 0; }
 .admin-heading, .section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 28px; }
 .admin-heading { margin-bottom: 30px; }
