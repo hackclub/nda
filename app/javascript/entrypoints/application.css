@@ -320,6 +320,7 @@ blockquote li + li { margin-top: 10px; }
 .secondary-path { margin: 18px 0 0; text-align: center; font-size: 13px; color: var(--muted); }
 .secondary-path a { color: inherit; text-decoration: underline; }
 .legacy-import dl { margin-top: 18px; }
+.challenge-resend { margin-top: 16px; }
 .cosign { margin-top: 60px; }
 .cosign .recorder-note { margin-top: 20px; }
 @media (max-width: 760px) { .cosign { margin-top: 42px; } }

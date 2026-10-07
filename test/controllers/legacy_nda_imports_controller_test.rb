@@ -180,4 +180,20 @@ class LegacyNdaImportsControllerTest < ActionController::TestCase
     assert_redirected_to legacy_nda_import_path
     assert_not_equal old_digest, import.reload.challenge_digest
   end
+
+  test "renders the resend button hidden until the interval has passed" do
+    import = users(:one).legacy_nda_imports.create!(source: "upload")
+    with_stubbed_mail { LegacyNda::EmailChallenge.issue!(import, email: "ada@example.com") }
+
+    get :show
+    assert_select "form.challenge-resend[hidden]"
+    assert_select "[data-resend-in]" do |note|
+      assert_includes 1..LegacyNda::EmailChallenge::RESEND_INTERVAL.to_i, note.first["data-resend-in"].to_i
+    end
+
+    import.update_column(:updated_at, LegacyNda::EmailChallenge::RESEND_INTERVAL.ago - 1.second)
+    get :show
+    assert_select "form.challenge-resend:not([hidden])"
+    assert_select "[data-resend-in]", count: 0
+  end
 end

@@ -20,8 +20,10 @@ module LegacyNda
       end
 
       def resendable?(import)
-        import.challenge_pending? && import.challenge_email.present? && import.updated_at < RESEND_INTERVAL.ago
+        import.challenge_pending? && import.challenge_email.present? && resendable_at(import).past?
       end
+
+      def resendable_at(import) = import.updated_at + RESEND_INTERVAL
 
       def verify(import, code)
         import.with_lock do
