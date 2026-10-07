@@ -1,4 +1,4 @@
 Rails.application.config.filter_parameters += [
-  :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc,
+  :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc, :code,
   :birthdate, :address, :postal, :city, :region, :country, :name, :identity_video, :transcript, :user_agent
 ]
