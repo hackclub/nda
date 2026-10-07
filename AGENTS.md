@@ -18,7 +18,7 @@ The agreement in `app/models/nda_document.rb` is based on the Hack Club Contribu
 - Bun 1.4.2 for all JavaScript (`packageManager` in `package.json`, lockfile is `bun.lock`)
 - Active Storage (disk in development, Cloudflare R2 with SSE-C in production)
 - Airtable holds the old signing system's NDA records and stays the shared source of truth (`AIRTABLE_TOKEN`, `AIRTABLE_BASE_ID`, `AIRTABLE_TABLE_ID`)
-- Solid Queue for the one recurring job, with its tables in the primary database and its supervisor inside Puma (`SOLID_QUEUE_IN_PUMA`). No Solid Cache or Solid Cable; production caches in-process.
+- Solid Queue for two recurring jobs (finished-job cleanup and the hourly Airtable cache refresh), with its tables in the primary database and its supervisor inside Puma (`SOLID_QUEUE_IN_PUMA`). No Solid Cache or Solid Cable; production caches in-process.
 - Docker Hardened Images for Ruby 3.4 and Bun 1.x (floating tags, not digest-pinned)
 
 ## Commands
@@ -78,6 +78,7 @@ Tests need Postgres. They mock xAI (`XaiTranscription.call`) and do not call liv
 | `app/models/legacy_nda_import.rb` | Upload workflow, audit row, retention |
 | `app/jobs/verify_legacy_nda_import_job.rb` | Runs verification off the request |
 | `app/jobs/import_airtable_nda_job.rb` | Looks a member up in Airtable off the request |
+| `app/jobs/refresh_airtable_nda_cache_job.rb` | Hourly: re-caches every signed Airtable row for sign-in |
 | `app/jobs/sync_signature_to_airtable_job.rb` | Writes a new signature back to Airtable |
 | `app/jobs/attach_airtable_document_job.rb` | Fetches an imported PDF after the claim is settled |
 | `lib/tasks/airtable.rake` | One-off: tag pre-existing rows with `Source` |
@@ -163,6 +164,10 @@ Other rules:
 - `AIRTABLE_TOKEN` stays server-side and grants write access to every personal detail in the base. `AIRTABLE_BASE_ID` and `AIRTABLE_TABLE_ID` are configuration, not secrets.
 - The Airtable base is the old signing system's record of who has an NDA. It holds no Slack ID, so an email address is the only join key, and a bulk backfill is impossible — an import can only ever start from a signed-in member. A row counts as signed only when `{Signed?}` is true; 396 of its rows are people who started and never finished, and those must never read as a signature.
 - An Airtable match proves somebody signed, never who is asking. Settle a claim only on the verified Hack Club Auth account email or a passed email challenge, exactly as for an uploaded PDF, and record the row id in `airtable_record_id` so one row cannot be claimed twice.
+- `AirtableNdaRecord` is a local copy of every signed row, refreshed hourly by `RefreshAirtableNdaCacheJob`
+  (`bin/rails airtable:backfill_ndas` runs it by hand). Only the sign-in check treats a miss as final
+  (`signed_for(..., cached_only: true)`); a lookup the member asked for goes to the base on a miss, or anyone who
+  signed after the last refresh could never be found. The job refuses to replace the cache with an empty answer.
 - `LegacyNda::AirtableImport.check_on_sign_in` runs one query per member, once, gated on `users.airtable_checked_at`, and the callback swallows every `AirtableClient::Error`. A login must never fail or stall because the base is slow or down, so keep the lookup out of the settling work: the PDF is fetched afterwards by `AttachAirtableDocumentJob`.
 - `LegacyNda::AirtableImport.challenge!` must answer identically whether or not the address is in the base. Naming an address that is present would turn the importer into a directory of who signed an NDA.
 - Airtable formulas take double-quoted strings. Every value interpolated into `filterByFormula` goes through `AirtableClient.quote`, or an address can rewrite the filter.

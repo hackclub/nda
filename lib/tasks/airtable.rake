@@ -3,8 +3,8 @@ namespace :airtable do
   task backfill_ndas: :environment do
     abort "Airtable is not configured." unless AirtableClient.configured?
 
-    records = LegacyNda::AirtableRecord.all_signed.to_a
-    cached = AirtableNdaRecord.replace_from_airtable!(records)
+    cached = RefreshAirtableNdaCacheJob.perform_now
+    abort "Airtable returned no signed NDAs; the cache was left alone." unless cached
     puts "Cached #{cached} signed Airtable NDA records. Login lookups are now local."
   end
 
