@@ -145,7 +145,38 @@ class LegacyNda::AirtableImportTest < ActiveSupport::TestCase
     assert_equal "recSigned", import.nda_signature.airtable_record_id
   end
 
-  test "a completed backfill makes a missing email a local negative lookup" do
+  test "a completed backfill makes a missing email a local negative lookup at sign-in" do
+    AirtableNdaRecord.replace_from_airtable!([])
+
+    with_airtable(rows: [ SIGNED ]) { assert_nil LegacyNda::AirtableImport.check_on_sign_in(@user) }
+
+    assert_empty NdaSignature.all
+  end
+
+  test "an explicit lookup finds a row signed after the backfill" do
+    AirtableNdaRecord.replace_from_airtable!([])
+    import = import_for
+
+    with_airtable(rows: [ SIGNED ]) { LegacyNda::AirtableImport.claim!(import) }
+
+    assert_predicate import.reload, :approved?
+    assert_equal "recSigned", import.nda_signature.airtable_record_id
+  end
+
+  test "a code goes to an address signed after the backfill" do
+    AirtableNdaRecord.replace_from_airtable!([])
+    import = import_for
+    import.update!(state: "email_pending")
+
+    with_airtable(rows: [ SIGNED ]) do
+      with_stubbed_mail { LegacyNda::AirtableImport.challenge!(import, "ada@example.com") }
+    end
+
+    assert_predicate import.reload, :challenge_live?
+    assert_equal [ "ada@example.com" ], sent_mail_for(:import_challenge).pluck(:to)
+  end
+
+  test "a completed backfill stays a local negative lookup when Airtable is not configured" do
     AirtableNdaRecord.replace_from_airtable!([])
     import = import_for
 

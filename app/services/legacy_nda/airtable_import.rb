@@ -20,7 +20,7 @@ module LegacyNda
           return settle!(user.legacy_nda_imports.create!(source: "airtable", ip_address: ip), cached)
         end
 
-        record = cached || AirtableRecord.signed_for(user.verified_email)
+        record = cached || AirtableRecord.signed_for(user.verified_email, cached_only: true)
         user.update!(airtable_checked_at: Time.current)
         return nil if record.nil? || taken?(record)
 
