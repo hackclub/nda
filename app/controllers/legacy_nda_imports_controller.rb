@@ -47,6 +47,16 @@ class LegacyNdaImportsController < ApplicationController
     redirect_to legacy_nda_import_path
   end
 
+  def change_email
+    import = current_import
+    return redirect_to legacy_nda_import_path unless import&.challenge_pending? && import.source_airtable?
+    return redirect_to legacy_nda_import_path, alert: TOO_MANY if attempts_today >= MAX_ATTEMPTS_PER_DAY
+
+    import.update!(challenge_digest: nil, challenge_expires_at: nil)
+    current_user.legacy_nda_imports.create!(source: "airtable", state: "email_pending", ip_address: request.remote_ip)
+    redirect_to legacy_nda_import_path
+  end
+
   def resend_challenge
     import = current_import
     return redirect_to legacy_nda_import_path unless import && LegacyNda::EmailChallenge.resendable?(import)

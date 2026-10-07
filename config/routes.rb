@@ -14,6 +14,7 @@ Rails.application.routes.draw do
     post :resend_challenge
     post :lookup
     post :lookup_email
+    post :change_email
   end
 
   get "/cosign/:token", to: "cosignatures#show", as: :cosign

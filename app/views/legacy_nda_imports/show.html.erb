@@ -48,6 +48,11 @@
       <p class="recorder-note" data-resend-in="<%= (LegacyNda::EmailChallenge.resendable_at(@import) - Time.current).ceil %>">
         A fresh code can be requested after a couple of minutes.</p>
     <% end %>
+    <% if @import.source_airtable? %>
+      <%= form_with url: change_email_legacy_nda_import_path, id: "change-email" do %><% end %>
+      <p class="recorder-note">Wrong address, or nothing arrived?
+        <button type="submit" form="change-email" class="inline-link">Use a different one</button>.</p>
+    <% end %>
 
   <% elsif @import && (@import.pending? || @import.verifying?) %>
     <% if @import.source_airtable? %>

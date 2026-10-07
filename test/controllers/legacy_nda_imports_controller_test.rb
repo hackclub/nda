@@ -196,4 +196,41 @@ class LegacyNdaImportsControllerTest < ActionController::TestCase
     assert_select "form.challenge-resend:not([hidden])"
     assert_select "[data-resend-in]", count: 0
   end
+
+  test "lets a member waiting on a code go back and name a different address" do
+    import = users(:one).legacy_nda_imports.create!(
+      source: "airtable", state: "challenge_pending", challenge_email: "ada@example.com",
+      challenge_digest: "digest", challenge_expires_at: 10.minutes.from_now
+    )
+
+    get :show
+    assert_select "form[action=?]", change_email_legacy_nda_import_path
+
+    post :change_email
+
+    assert_redirected_to legacy_nda_import_path
+    assert_nil import.reload.challenge_digest
+    assert_predicate users(:one).legacy_nda_imports.order(:created_at).last, :email_pending?
+  end
+
+  test "changing address counts against the daily limit" do
+    (LegacyNdaImportsController::MAX_ATTEMPTS_PER_DAY - 1).times { users(:one).legacy_nda_imports.create!(state: "rejected") }
+    users(:one).legacy_nda_imports.create!(source: "airtable", state: "challenge_pending", challenge_email: "ada@example.com")
+
+    assert_no_difference -> { LegacyNdaImport.count } do
+      post :change_email
+    end
+    assert_equal LegacyNdaImportsController::TOO_MANY, flash[:alert]
+  end
+
+  test "an uploaded document's address cannot be changed" do
+    users(:one).legacy_nda_imports.create!(source: "upload", state: "challenge_pending", challenge_email: "ada@example.com")
+
+    get :show
+    assert_select "form[action=?]", change_email_legacy_nda_import_path, count: 0
+
+    assert_no_difference -> { LegacyNdaImport.count } do
+      post :change_email
+    end
+  end
 end
