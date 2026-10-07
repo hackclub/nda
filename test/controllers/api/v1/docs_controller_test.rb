@@ -6,7 +6,10 @@ class Api::V1::DocsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "title", text: "Hack Club NDA API Docs"
-    assert_select "code", text: "/api/v1/nda_status/:slack_id"
+    assert_select ".endpoint-heading code", text: "/api/v1/nda_status/:info"
+    assert_select ".docs-request pre", count: 2
+    assert_not_includes response.body, ":slack_id"
+    assert_includes response.body, '"signature_type": "native"'
     assert_select "a[href='#{openapi_path}']", text: "OpenAPI 3.1 specification"
     assert_includes response.body, NdaDocument::VERSION
     assert_not_includes response.body, "?email="
@@ -21,9 +24,10 @@ class Api::V1::DocsControllerTest < ActionDispatch::IntegrationTest
 
     document = response.parsed_body
     assert_equal "3.1.0", document["openapi"]
-    assert_equal [ "/api/v1/nda_status/{slack_id}" ], document["paths"].keys
-    operation = document.dig("paths", "/api/v1/nda_status/{slack_id}", "get")
+    assert_equal [ "/api/v1/nda_status/{info}" ], document["paths"].keys
+    operation = document.dig("paths", "/api/v1/nda_status/{info}", "get")
     assert_equal "getNdaStatus", operation["operationId"]
+    assert_equal "info", operation["parameters"].first["name"]
     assert_equal "path", operation["parameters"].first["in"]
     assert_equal true, operation["parameters"].first["required"]
     assert_equal %w[nda_version signature_type signed_at status],

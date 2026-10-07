@@ -13,24 +13,20 @@
   <section class="docs-endpoint" aria-labelledby="endpoint-title">
     <div class="endpoint-heading" id="endpoint-title">
       <span class="http-method">GET</span>
-      <code>/api/v1/nda_status/:slack_id</code>
+      <code>/api/v1/nda_status/:info</code>
     </div>
-    <p>Replace <code>:slack_id</code> with a Slack member ID beginning with <code>U</code> or <code>W</code>, or a URL-encoded email address.</p>
-    <pre><code>curl <%= request.base_url %>/api/v1/nda_status/orpheus%40example.com</code></pre>
+    <p>Replace <code>:info</code> with a Slack ID or URL-encoded email address.</p>
   </section>
 
   <div class="docs-grid">
     <section class="docs-section docs-request">
-      <h2>Request</h2>
-      <p>Send the Slack member ID or URL-encoded email as the final path segment.</p>
-      <pre><code>curl <%= api_v1_nda_status_url(slack_id: "U0123ABCDEF") %></code></pre>
-
-      <dl class="docs-parameters">
-        <div>
-          <dt><code>slack_id</code></dt>
-          <dd>Required path parameter · Slack ID: 9–21 characters; email: up to 254 characters</dd>
-        </div>
-      </dl>
+      <h2>Examples</h2>
+      <h3>Slack ID</h3>
+      <pre><code>GET /api/v1/nda_status/U0123ABCDEF</code></pre>
+      <h3>Email</h3>
+      <pre><code>GET /api/v1/nda_status/orpheus%40example.com</code></pre>
+      <p>Slack IDs begin with <code>U</code> or <code>W</code>. Emails are case-insensitive; encode <code>@</code> as <code>%40</code>.</p>
+      <p>Email lookup checks signing and verified account emails. Email responses omit <code>slack_id</code> and are not cached.</p>
     </section>
 
     <section class="docs-section docs-responses">
@@ -40,22 +36,20 @@
         <h3>Signed</h3>
         <code>200 OK</code>
       </div>
-      <p>A member with a signature for the current NDA receives <code>signed</code> and a signing timestamp.</p>
-      <pre><code>HTTP/1.1 200 OK
-Content-Type: application/json
-
-{
+      <p>An approved current signature or legacy import returns <code>signed</code>.</p>
+      <pre><code>{
   "slack_id": "U0123ABCDEF",
   "status": "signed",
   "nda_version": "<%= NdaDocument::VERSION %>",
-  "signed_at": "2025-04-02T15:04:05Z"
+  "signed_at": "2025-04-02T15:04:05Z",
+  "signature_type": "native"
 }</code></pre>
 
       <div class="response-heading">
         <h3>Not signed</h3>
         <code>200 OK</code>
       </div>
-      <p>An unknown member, or a member without a signature for the current NDA, receives <code>not_signed</code>. In that case, <code>signed_at</code> is omitted.</p>
+      <p>Unknown or unsigned members return <code>not_signed</code>, without signing details.</p>
       <pre><code>{
   "slack_id": "U0123ABCDEF",
   "status": "not_signed",
@@ -67,10 +61,10 @@ Content-Type: application/json
   <div class="docs-grid docs-grid-secondary">
     <section class="docs-section">
       <div class="response-heading">
-        <h2>Invalid Slack ID</h2>
+        <h2>Invalid input</h2>
         <code>400 Bad Request</code>
       </div>
-      <p>A malformed Slack ID receives a <code>400 Bad Request</code>.</p>
+      <p>Malformed Slack IDs return <code>invalid_slack_id</code>; malformed emails containing <code>@</code> return <code>invalid_email</code>.</p>
       <pre><code>{
   "error": "invalid_slack_id"
 }</code></pre>

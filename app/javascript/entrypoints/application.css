@@ -221,6 +221,7 @@ blockquote li + li { margin-top: 10px; }
 .docs-section { min-width: 0; padding: 48px 0 24px; }
 .docs-section h2 { margin: 0 0 12px; font-size: 21px; }
 .docs-section h3 { margin: 0; font-size: 15px; }
+.docs-request h3 { margin: 20px 0 8px; }
 .docs-section p { margin: 0 0 18px; color: var(--muted); font-size: 14px; line-height: 1.65; }
 .endpoint-heading { margin-bottom: 14px; display: flex; align-items: center; gap: 12px; }
 .endpoint-heading code { min-width: 0; overflow-wrap: anywhere; font-size: 18px; font-weight: 700; }

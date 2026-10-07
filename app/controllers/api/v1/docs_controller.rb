@@ -30,7 +30,7 @@ class Api::V1::DocsController < ApplicationController
       },
       servers: [ { url: request.base_url } ],
       paths: {
-        "/api/v1/nda_status/{slack_id}" => {
+        "/api/v1/nda_status/{info}" => {
           get: {
             operationId: "getNdaStatus",
             summary: "Check a member's NDA status",
@@ -38,7 +38,7 @@ class Api::V1::DocsController < ApplicationController
             security: [],
             parameters: [
               {
-                name: "slack_id",
+                name: "info",
                 in: "path",
                 required: true,
                 description: "A Slack member ID beginning with U or W, or a URL-encoded email address.",
