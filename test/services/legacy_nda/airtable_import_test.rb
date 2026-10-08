@@ -109,7 +109,7 @@ class LegacyNda::AirtableImportTest < ActiveSupport::TestCase
     assert_equal "ada@example.com", import.nda_signature.legacy_signer_email
   end
 
-  test "a row someone already holds cannot be claimed again" do
+  test "a second account on the same verified address is covered by the row's one signature" do
     first = import_for
     with_airtable(rows: [ SIGNED ]) { LegacyNda::AirtableImport.claim!(first) }
 
@@ -117,9 +117,66 @@ class LegacyNda::AirtableImportTest < ActiveSupport::TestCase
     second = import_for(users(:two))
     with_airtable(rows: [ SIGNED ]) { LegacyNda::AirtableImport.claim!(second) }
 
-    assert_predicate second.reload, :email_pending?
-    assert_nil second.nda_signature
+    held = first.reload.nda_signature
+    assert_predicate second.reload, :approved?
+    assert_nil second.nda_signature, "the row must still back only one signature"
+    assert_equal held, second.covering_signature
+    assert_equal held, users(:two).reload.reportable_nda_signature
+    assert_equal "account_email", second.nda_signature_link.proven_via
+    assert_equal 1, NdaSignature.count
+  end
+
+  test "a second account can prove a held row's address with a code" do
+    first = import_for
+    with_airtable(rows: [ SIGNED ]) { LegacyNda::AirtableImport.claim!(first) }
+
+    second = import_for(users(:two))
+    second.update!(state: "email_pending")
+    with_airtable(rows: [ SIGNED ]) do
+      with_stubbed_mail { LegacyNda::AirtableImport.challenge!(second, "ada@example.com") }
+      assert_equal [ "ada@example.com" ], sent_mail_for(:import_challenge).pluck(:to)
+      assert LegacyNda::EmailChallenge.verify(second, sent_mail_for(:import_challenge).first[:data_variables]["challenge_code"])
+      LegacyNda::AirtableImport.settle_challenge!(second)
+    end
+
+    assert_predicate second.reload, :approved?
+    assert_equal "challenge", second.nda_signature_link.proven_via
+    assert_equal first.reload.nda_signature, users(:two).reload.reportable_nda_signature
+  end
+
+  test "a row held under a different address is not shared" do
+    held = create_legacy_signature(users(:two), legacy_source: "airtable", airtable_record_id: "recSigned",
+      legacy_signer_email: "grace@example.com")
+    import = import_for
+    with_airtable(rows: [ SIGNED ]) do
+      LegacyNda::AirtableImport.claim!(import)
+      import.update!(state: "email_pending")
+      with_stubbed_mail { LegacyNda::AirtableImport.challenge!(import, "ada@example.com") }
+    end
+
+    assert_empty sent_mail_for(:import_challenge)
+    assert_empty held.nda_signature_links
+    assert_nil @user.reload.reportable_nda_signature
+  end
+
+  test "a link stops counting once the signature behind it is revoked" do
+    first = import_for
+    with_airtable(rows: [ SIGNED ]) { LegacyNda::AirtableImport.claim!(first) }
+    users(:two).update!(verified_email: "ada@example.com")
+    with_airtable(rows: [ SIGNED ]) { LegacyNda::AirtableImport.claim!(import_for(users(:two))) }
+
+    first.reload.nda_signature.update!(verification_state: "rejected")
+
     assert_nil users(:two).reload.reportable_nda_signature
+  end
+
+  test "a sign-in on a second account with the same address is covered without asking" do
+    held = create_legacy_signature(users(:two), legacy_source: "airtable", airtable_record_id: "recSigned")
+
+    with_airtable(rows: [ SIGNED ]) { LegacyNda::AirtableImport.check_on_sign_in(@user) }
+
+    assert_predicate @user.legacy_nda_imports.sole, :approved?
+    assert_equal held, @user.reload.reportable_nda_signature
   end
 
   test "a crafted address cannot widen the lookup to somebody else's row" do
@@ -200,8 +257,8 @@ class LegacyNda::AirtableImportTest < ActiveSupport::TestCase
       LegacyNda::AirtableImport.claim!(import, fresh: true)
     end
     assert_predicate import.reload, :email_pending?
-    create_legacy_signature(users(:two), airtable_record_id: "recSigned")
+    create_legacy_signature(users(:two), airtable_record_id: "recSigned", legacy_signer_email: "grace@example.com")
     with_airtable(rows: [ SIGNED ]) { LegacyNda::AirtableImport.claim!(import, fresh: true) }
-    assert_nil import.reload.nda_signature
+    assert_nil import.reload.covering_signature
   end
 end

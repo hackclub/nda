@@ -161,6 +161,18 @@ class Api::V1::NdaStatusesControllerTest < ActionDispatch::IntegrationTest
     assert_equal signature.signed_at.iso8601, response.parsed_body["signed_at"]
   end
 
+  test "a linked second account reads as signed under its own Slack ID" do
+    signature = create_legacy_signature(users(:one))
+    signature.nda_signature_links.create!(user: users(:two), proven_via: "account_email")
+
+    get api_v1_nda_status_url(slack_id: users(:two).slack_id)
+
+    assert_equal %w[nda_version signature_type signed_at slack_id status], response.parsed_body.keys.sort
+    assert_equal "signed", response.parsed_body["status"]
+    assert_equal "legacy", response.parsed_body["signature_type"]
+    assert_equal users(:two).slack_id, response.parsed_body["slack_id"]
+  end
+
   test "prefers the native signature when a member holds both" do
     create_legacy_signature(users(:one), signed_at: 2.years.ago)
     native = create_signature(users(:one), signed_at: Time.current)

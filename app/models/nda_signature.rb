@@ -5,6 +5,7 @@ class NdaSignature < ApplicationRecord
   belongs_to :user
   belongs_to :reviewed_by, class_name: "User", optional: true
   has_one :legacy_nda_import, dependent: :nullify
+  has_many :nda_signature_links, dependent: :destroy
   has_one_attached :identity_video
 
   enum :signature_type, { native: "native", legacy: "legacy" }, default: "native", validate: true

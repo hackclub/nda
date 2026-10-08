@@ -3,6 +3,7 @@ class User < ApplicationRecord
 
   has_many :nda_signatures, dependent: :destroy
   has_many :legacy_nda_imports, dependent: :destroy
+  has_many :nda_signature_links, dependent: :destroy
   has_many :admin_actions, foreign_key: :admin_user_id, dependent: :restrict_with_exception,
     inverse_of: :admin_user
 
@@ -50,7 +51,9 @@ class User < ApplicationRecord
 
   def reportable_nda_signature
     nda_signatures.approved.native.find_by(document_version: NdaDocument::VERSION) ||
-      nda_signatures.approved.legacy.order(:signed_at).first
+      NdaSignature.approved.legacy.where(user_id: id)
+        .or(NdaSignature.approved.legacy.where(id: nda_signature_links.select(:nda_signature_id)))
+        .order(:signed_at).first
   end
 
   def age(on: Date.current)

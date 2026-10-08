@@ -6,6 +6,7 @@ class LegacyNdaImport < ApplicationRecord
 
   belongs_to :user
   belongs_to :nda_signature, optional: true
+  has_one :nda_signature_link, dependent: :nullify
   has_one_attached :document
 
   enum :state, {
@@ -14,6 +15,9 @@ class LegacyNdaImport < ApplicationRecord
     rejected: "rejected"
   }, default: "pending", validate: true
   enum :source, { upload: "upload", airtable: "airtable" }, default: "upload", prefix: true, validate: true
+
+  # The signature this import settled on: its own, or another account's it was linked to.
+  def covering_signature = nda_signature || nda_signature_link&.nda_signature
 
   def purge_document!
     document.purge

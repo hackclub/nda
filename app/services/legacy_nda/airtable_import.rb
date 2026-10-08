@@ -7,7 +7,11 @@ module LegacyNda
         return Claim.reject!(import, "already_covered") if import.user.reportable_nda_signature
 
         record = AirtableRecord.signed_for(import.user.verified_email, fresh:)
-        return settle!(import, record) if record && !taken?(record)
+        return import.update!(state: "email_pending") unless record
+
+        holder = holder_of(record)
+        return settle!(import, record) unless holder
+        return Link.settle!(import, holder, via: "account_email") if Link.linkable?(holder, import.user, record.email)
 
         import.update!(state: "email_pending")
       end
@@ -15,24 +19,27 @@ module LegacyNda
       def check_on_sign_in(user, ip: nil)
         return nil if user.verified_email.blank? || user.reportable_nda_signature
 
-        cached = AirtableNdaRecord.signed_for(user.verified_email)
-        if user.airtable_checked_at?
-          return nil if cached.nil? || taken?(cached)
-
-          return settle!(user.legacy_nda_imports.create!(source: "airtable", ip_address: ip), cached)
+        record = AirtableNdaRecord.signed_for(user.verified_email)
+        unless user.airtable_checked_at?
+          record ||= AirtableRecord.signed_for(user.verified_email, cached_only: true)
+          user.update!(airtable_checked_at: Time.current)
         end
+        return nil if record.nil?
 
-        record = cached || AirtableRecord.signed_for(user.verified_email, cached_only: true)
-        user.update!(airtable_checked_at: Time.current)
-        return nil if record.nil? || taken?(record)
+        holder = holder_of(record)
+        return nil if holder && !Link.linkable?(holder, user, record.email)
 
-        settle!(user.legacy_nda_imports.create!(source: "airtable", ip_address: ip), record)
+        import = user.legacy_nda_imports.create!(source: "airtable", ip_address: ip)
+        holder ? Link.settle!(import, holder, via: "account_email") : settle!(import, record)
       end
 
       def challenge!(import, email)
         address = email.to_s.strip
         record = AirtableRecord.signed_for(address)
-        return EmailChallenge.issue!(import, email: record.email) if record && !taken?(record)
+        holder = record && holder_of(record)
+        if record && (holder.nil? || Link.linkable?(holder, import.user, record.email))
+          return EmailChallenge.issue!(import, email: record.email)
+        end
 
         import.update!(state: "challenge_pending", challenge_email: address, challenge_digest: nil)
       end
@@ -40,9 +47,11 @@ module LegacyNda
       def settle_challenge!(import)
         record = AirtableRecord.signed_for(import.challenge_email)
         return Claim.reject!(import, "airtable_row_missing") unless record
-        return Claim.reject!(import, "already_claimed") if taken?(record)
+        holder = holder_of(record)
+        return settle!(import, record) unless holder
+        return Link.settle!(import, holder, via: "challenge") if Link.linkable?(holder, import.user, record.email)
 
-        settle!(import, record)
+        Claim.reject!(import, "already_claimed")
       end
 
       def archive_document!(import, record)
@@ -89,8 +98,8 @@ module LegacyNda
         }
       end
 
-      def taken?(record)
-        NdaSignature.where.not(verification_state: "rejected").exists?(airtable_record_id: record.id)
+      def holder_of(record)
+        NdaSignature.where.not(verification_state: "rejected").find_by(airtable_record_id: record.id)
       end
     end
   end

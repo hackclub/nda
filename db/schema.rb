@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_18_191000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_08_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -100,6 +100,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_191000) do
     t.index ["nda_signature_id"], name: "index_legacy_nda_imports_on_nda_signature_id"
     t.index ["state"], name: "index_legacy_nda_imports_on_state"
     t.index ["user_id"], name: "index_legacy_nda_imports_on_user_id"
+  end
+
+  create_table "nda_signature_links", force: :cascade do |t|
+    t.bigint "nda_signature_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "legacy_nda_import_id"
+    t.string "proven_via", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["legacy_nda_import_id"], name: "index_nda_signature_links_on_legacy_nda_import_id"
+    t.index ["nda_signature_id", "user_id"], name: "index_nda_signature_links_on_nda_signature_id_and_user_id", unique: true
+    t.index ["nda_signature_id"], name: "index_nda_signature_links_on_nda_signature_id"
+    t.index ["user_id"], name: "index_nda_signature_links_on_user_id"
   end
 
   create_table "nda_signatures", force: :cascade do |t|
@@ -338,6 +351,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_191000) do
   add_foreign_key "admin_actions", "users", column: "target_user_id"
   add_foreign_key "legacy_nda_imports", "nda_signatures"
   add_foreign_key "legacy_nda_imports", "users"
+  add_foreign_key "nda_signature_links", "legacy_nda_imports"
+  add_foreign_key "nda_signature_links", "nda_signatures"
+  add_foreign_key "nda_signature_links", "users"
   add_foreign_key "nda_signatures", "users"
   add_foreign_key "nda_signatures", "users", column: "reviewed_by_id"
   add_foreign_key "solid_queue_batch_executions", "solid_queue_batches", column: "batch_id", on_delete: :cascade

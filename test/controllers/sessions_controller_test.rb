@@ -30,6 +30,16 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "recSigned", signature.airtable_record_id
   end
 
+  test "a second account on an address someone already imported is covered at sign-in" do
+    held = create_legacy_signature(users(:two), legacy_source: "airtable", airtable_record_id: "recSigned")
+
+    with_auth { with_airtable(rows: [ SIGNED_ROW ]) { sign_in } }
+
+    assert_redirected_to legacy_nda_import_path
+    assert_equal held, users(:one).reload.reportable_nda_signature
+    assert_equal 1, NdaSignature.count
+  end
+
   test "a member with no row signs as normal" do
     with_auth { with_airtable(rows: []) { sign_in } }
 

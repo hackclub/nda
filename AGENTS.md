@@ -67,6 +67,7 @@ Tests need Postgres. They mock xAI (`XaiTranscription.call`) and do not call liv
 | `app/services/legacy_nda/redactor.rb` | Strips personal data before scoring or any AI call |
 | `app/services/legacy_nda/verifier.rb` | Layers 1-3 into approved / needs_review / rejected |
 | `app/services/legacy_nda/claim.rb` | Identity binding; the only place an import becomes a signature |
+| `app/services/legacy_nda/link.rb` | Covers a second account (personal + HQ) with a signature another account holds |
 | `app/services/legacy_nda/email_challenge.rb` | HMAC-stored one-time code to the document's address |
 | `app/services/legacy_nda/airtable_record.rb` | Looks up a signed row in the old system's Airtable base |
 | `app/services/legacy_nda/airtable_import.rb` | Turns a matched Airtable row into a legacy signature |
@@ -164,6 +165,13 @@ Other rules:
 - `AIRTABLE_TOKEN` stays server-side and grants write access to every personal detail in the base. `AIRTABLE_BASE_ID` and `AIRTABLE_TABLE_ID` are configuration, not secrets.
 - The Airtable base is the old signing system's record of who has an NDA. It holds no Slack ID, so an email address is the only join key, and a bulk backfill is impossible — an import can only ever start from a signed-in member. A row counts as signed only when `{Signed?}` is true; 396 of its rows are people who started and never finished, and those must never read as a signature.
 - An Airtable match proves somebody signed, never who is asking. Settle a claim only on the verified Hack Club Auth account email or a passed email challenge, exactly as for an uploaded PDF, and record the row id in `airtable_record_id` so one row cannot be claimed twice.
+- One person can hold two Hack Club accounts (a personal one and an HQ one, each with its own Slack ID). A document
+  or Airtable row still backs exactly one `NdaSignature`, but a second account that proves the address that
+  signature was settled on (`legacy_signer_email`), by its verified account email or a passed challenge, gets an
+  `NdaSignatureLink` instead of an `already_claimed` rejection, and `User#reportable_nda_signature` counts it.
+  `LegacyNda::Link.linkable?` is the whole rule: approved legacy signatures only, the address must match exactly,
+  and a link stops counting the moment its signature is no longer approved. Never link on a name, a Slack
+  profile, or an unverified contact email.
 - `AirtableNdaRecord` is a local copy of every signed row, refreshed hourly by `RefreshAirtableNdaCacheJob`
   (`bin/rails airtable:backfill_ndas` runs it by hand). Only the sign-in check treats a miss as final
   (`signed_for(..., cached_only: true)`); a lookup the member asked for goes to the base on a miss, or anyone who

@@ -9,13 +9,21 @@ module LegacyNda
           envelope_id: result.fields[:envelope_id]
         )
         return reject!(import) if result.rejected?
-        return reject!(import, "already_claimed") if already_claimed?(import)
+        if (holder = holder_of(import)) && !Link.linkable?(holder, import.user, signer_email(import))
+          return reject!(import, "already_claimed")
+        end
         return challenge!(import) if challengeable?(import)
 
         settle!(import)
       end
 
       def settle!(import)
+        if (holder = holder_of(import))
+          return reject!(import, "already_claimed") unless Link.linkable?(holder, import.user, signer_email(import))
+
+          return Link.settle!(import, holder, via: account_email_matches?(import) ? "account_email" : "challenge")
+        end
+
         signature = import.user.nda_signatures.create!(attributes_for(import))
         import.update!(state: signature.verification_state, nda_signature: signature)
         SyncSignatureToAirtableJob.perform_later(signature.id) if signature.approved? && AirtableClient.configured?
@@ -69,17 +77,19 @@ module LegacyNda
         import.verification["signer_email"].present? && !account_email_matches?(import)
       end
 
-      def already_claimed?(import)
+      def holder_of(import)
         claimed = NdaSignature.legacy.where.not(verification_state: "rejected")
         by_digest = claimed.where(legacy_document_sha256: import.document_sha256)
-        return by_digest.exists? if import.envelope_id.blank?
+        return by_digest.first if import.envelope_id.blank?
 
-        by_digest.or(claimed.where(legacy_envelope_id: import.envelope_id)).exists?
+        by_digest.or(claimed.where(legacy_envelope_id: import.envelope_id)).first
       end
+
+      def signer_email(import) = import.verification["signer_email"]
 
       def account_email_matches?(import)
         account = import.user.verified_email.to_s.strip.downcase
-        account.present? && account == import.verification["signer_email"].to_s.strip.downcase
+        account.present? && account == signer_email(import).to_s.strip.downcase
       end
 
       def challenge!(import)

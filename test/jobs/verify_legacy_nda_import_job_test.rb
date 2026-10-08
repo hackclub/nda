@@ -132,15 +132,42 @@ class VerifyLegacyNdaImportJobTest < ActiveJob::TestCase
     assert_not LegacyNda::EmailChallenge.verify(import, code)
   end
 
-  test "rejects a second claim on an envelope somebody already holds" do
-    verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "ada@example.com"))
+  test "a second account on the document's address is covered by the envelope's one signature" do
+    first = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "ada@example.com"))
 
     users(:two).update!(email: "ada@example.com", verified_email: "ada@example.com")
     second = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "ada@example.com"), user: users(:two))
 
+    assert_predicate second, :approved?
+    assert_nil second.nda_signature, "the envelope must still back only one signature"
+    assert_equal first.nda_signature, users(:two).reload.reportable_nda_signature
+    assert_equal 1, NdaSignature.count
+  end
+
+  test "a second account on another address must prove the document's address first" do
+    first = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "ada@example.com"))
+    second = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "ada@example.com"), user: users(:two))
+
+    assert_predicate second, :challenge_pending?
+    assert_nil users(:two).reload.reportable_nda_signature
+
+    assert LegacyNda::EmailChallenge.verify(second, sent_mail_for(:import_challenge).first[:data_variables]["challenge_code"])
+    LegacyNda::Claim.settle!(second)
+
+    assert_predicate second.reload, :approved?
+    assert_equal "challenge", second.nda_signature_link.proven_via
+    assert_equal first.nda_signature, users(:two).reload.reportable_nda_signature
+  end
+
+  test "an envelope still awaiting review is not shared" do
+    verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "ada@example.com", body_date: "2020-01-01"))
+
+    users(:two).update!(email: "ada@example.com", verified_email: "ada@example.com")
+    second = verify_import(LegacyPdfFactory.legacy_document_pdf(recipient_email: "ada@example.com", body_date: "2020-01-01"), user: users(:two))
+
     assert_predicate second, :rejected?
     assert_includes second.reasons, "already_claimed"
-    assert_nil second.nda_signature
+    assert_nil users(:two).reload.reportable_nda_signature
   end
 
   test "a revoked import frees its envelope for the rightful owner" do

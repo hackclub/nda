@@ -58,6 +58,7 @@
             <% current = user.nda_signatures.find { _1.document_version == NdaDocument::VERSION } %>
             <% signature = current&.approved? ? current : user.nda_signatures.select(&:approved?).find(&:legacy?) %>
             <% displayed = current || signature %>
+            <% covered = user.reportable_nda_signature %>
             <tr>
               <td><strong><%= user.display_name %></strong><span><%= user.slack_id %> · <%= user.email.presence || "no email" %></span></td>
               <td>
@@ -65,6 +66,7 @@
                 <% elsif current %><span class="pill pill-warning"><%= current.verification_state.humanize %></span>
                 <% elsif user.current_nda_required_at? %><span class="pill pill-warning">Current requested</span>
                 <% elsif signature %><span class="pill">Legacy</span>
+                <% elsif covered %><span class="pill" title="Covered by <%= covered.user.slack_id %>'s legacy NDA">Linked</span>
                 <% else %><span class="pill pill-missing">Not signed</span><% end %>
               </td>
               <td><%= displayed&.signed_at ? tag.time(displayed.signed_at.to_date.to_fs(:medium), datetime: displayed.signed_at.iso8601, data: { local_time: true }) : "—" %></td>
@@ -81,7 +83,7 @@
                   <details class="admin-actions-menu">
                     <summary>Manage</summary>
                     <div class="admin-actions-panel">
-                      <% unless user.reportable_nda_signature %>
+                      <% unless covered %>
                         <%= button_to "Recheck Airtable (fresh lookup)", recheck_airtable_admin_user_path(user), method: :post, class: "menu-button" %>
                       <% end %>
                       <% if current.nil? && !user.current_nda_required_at? %>

@@ -2,7 +2,7 @@ module LegacyNda
   class ImportMailer
     class << self
       def settled(import)
-        signature = import.nda_signature
+        signature = import.covering_signature
         return unless signature
 
         deliver(import, :import_settled, {
