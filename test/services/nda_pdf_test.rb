@@ -44,6 +44,20 @@ class NdaPdfTest < ActiveSupport::TestCase
     assert_includes text, "Grace Hopper"
   end
 
+  test "keeps diacritics the built-in fonts can encode" do
+    @user.update!(legal_first_name: "José")
+
+    assert_includes text_of(@signature.reload), "José"
+  end
+
+  test "marks a name with no Windows-1252 counterpart instead of raising" do
+    @user.update!(legal_first_name: "佐藤")
+
+    text = text_of(@signature.reload)
+    assert_includes text, "??"
+    assert_includes text, "Lovelace"
+  end
+
   test "names the file the way the old system did" do
     assert_equal "Ada Lovelace - Hack Club Contributor NDA.pdf", NdaPdf.filename(@signature)
   end

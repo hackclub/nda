@@ -8,7 +8,17 @@ class NdaPdf
   CLOSING_HEIGHT = 300
   RULE = "AAAAAA".freeze
 
-  SUBSTITUTIONS = { "‑" => "-", "−" => "-", " " => " " }.freeze
+  SUBSTITUTIONS = { "‑" => "-", "−" => "-", " " => " " }.freeze
+
+  # The built-in AFM fonts cannot leave Windows-1252, so fold everything else
+  # into something they can render instead of raising mid-document.
+  WIN_ANSI = Encoding::WINDOWS_1252
+  TRANSLITERATIONS = {
+    "ł" => "l", "Ł" => "L", "đ" => "d", "Đ" => "D", "ı" => "i", "ə" => "e", "Ə" => "E",
+    "ħ" => "h", "Ħ" => "H", "ŋ" => "n", "Ŋ" => "N", "ŧ" => "t", "Ŧ" => "T", "ĸ" => "k",
+    "ơ" => "o", "Ơ" => "O", "ư" => "u", "Ư" => "U", "Ɔ" => "O", "Ɛ" => "E",
+    "ʻ" => "'", "ʼ" => "'"
+  }.freeze
 
   def self.call(signature) = new(signature).render
 
@@ -131,5 +141,25 @@ class NdaPdf
     pdf.number_pages "<page> of <total>", at: [ 0, -12 ], align: :right, size: 8
   end
 
-  def sanitize(value) = value.to_s.gsub(/[#{SUBSTITUTIONS.keys.join}]/, SUBSTITUTIONS)
+  def sanitize(value) = fold(value.to_s.gsub(/[#{SUBSTITUTIONS.keys.join}]/, SUBSTITUTIONS))
+
+  def fold(text)
+    return text if renderable?(text)
+
+    text.each_char.map { |char| renderable?(char) ? char : transliterate(char) }.join
+  end
+
+  def transliterate(char)
+    folded = TRANSLITERATIONS.fetch(char) { char.unicode_normalize(:nfkd).gsub(/\p{Mn}/, "") }
+    return folded if renderable?(folded)
+
+    "?"
+  end
+
+  def renderable?(string)
+    string.encode(WIN_ANSI)
+    true
+  rescue Encoding::UndefinedConversionError
+    false
+  end
 end
