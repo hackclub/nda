@@ -7,4 +7,4 @@
 <Paragraph fontSize="13" lineHeight="160" paddingBottom="16">Or paste this link into your browser:<Br />{data.nda_importUrl}</Paragraph>
 <Paragraph fontSize="14" lineHeight="160" paddingBottom="8">If you think this is a mistake, write to <Link href="mailto:team@hackclub.com">team@hackclub.com</Link>.</Paragraph>
 <Divider width="100" paddingTop="16" paddingBottom="16" />
-<Paragraph fontSize="12" lineHeight="170"><Strong>The Hack Foundation</Strong>, a 501(c)(3) nonprofit<Br />212 Battery St., Shelburne, VT 05401, USA<Br />This message concerns a legal agreement. Keep it for your records.</Paragraph>
+<Paragraph fontSize="12" lineHeight="170"><Strong>The Hack Foundation</Strong>, a 501(c)(3) nonprofit<Br />212 Battery St., Burlington, VT 05401, USA<Br />This message concerns a legal agreement. Keep it for your records.</Paragraph>
