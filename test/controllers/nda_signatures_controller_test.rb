@@ -153,6 +153,25 @@ class NdaSignaturesControllerSubmissionTest < ActionController::TestCase
     assert_nil signature.transcript
   end
 
+  test "shows the signature validation error without saving details or queuing verification" do
+    user = users(:one)
+
+    assert_no_difference("NdaSignature.count") do
+      assert_no_enqueued_jobs do
+        post :create, params: {
+          accepted: "1",
+          identity_video: fixture_file_upload("pledge.webm", "video/webm"),
+          signed_name: "A Different Name",
+          user: SIGNING_DETAILS.merge(city: "A Different City")
+        }
+      end
+    end
+
+    assert_redirected_to nda_signature_path
+    assert_equal "Signed name must match the recipient's legal name", flash[:alert]
+    assert_nil user.reload.city
+  end
+
   test "lets the signer discard a saved recording and retry" do
     signature = create_signature(users(:one), signed_at: Time.current)
     signature.update!(verification_state: "rejected")

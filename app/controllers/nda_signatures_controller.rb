@@ -30,6 +30,8 @@ class NdaSignaturesController < ApplicationController
     video = params.require(:identity_video)
     signature = build_signature(video)
     signature.verification_state = "processing"
+    raise ActiveRecord::RecordInvalid, signature unless signature.valid?
+
     current_user.transaction do
       current_user.save!
       signature.save!
