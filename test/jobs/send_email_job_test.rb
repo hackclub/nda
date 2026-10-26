@@ -26,6 +26,16 @@ class SendEmailJobTest < ActiveJob::TestCase
     assert_equal "123456", mail[:data_variables]["challenge_code"]
   end
 
+  test "lifts a suppression only for the co-sign request" do
+    with_stubbed_mail do
+      SendEmailJob.deliver_later(:import_challenge, to: "member@example.com", data: { challenge_code: "123456" })
+      SendEmailJob.deliver_later(:cosign_request, to: "parent@example.com", data: { cosigner_name: "Pat" })
+    end
+
+    assert_equal [ "parent@example.com" ], lifted_suppressions
+    assert_equal 2, sent_mail.size
+  end
+
   private
 
   def with_loops_configuration(&block)

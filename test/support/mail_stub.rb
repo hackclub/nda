@@ -1,12 +1,16 @@
 module MailStub
   def sent_mail = @sent_mail ||= []
+  def lifted_suppressions = @lifted_suppressions ||= []
   def sent_mail_for(template) = sent_mail.select { |mail| mail[:transactional_id] == "tmpl_#{template}" }
 
   def with_stubbed_mail(&block)
     with_loops_env do
       singleton = LoopsClient.singleton_class
       original = singleton.instance_method(:send_email)
+      original_lift = singleton.instance_method(:lift_suppression)
       collector = sent_mail
+      lifted = lifted_suppressions
+      singleton.define_method(:lift_suppression) { |email| lifted << email }
       singleton.define_method(:send_email) do |to:, transactional_id:, data_variables: {}|
         collector << { to: to, transactional_id: transactional_id,
                        data_variables: data_variables.with_indifferent_access }
@@ -15,6 +19,7 @@ module MailStub
         perform_enqueued_jobs(only: SendEmailJob, &block)
       ensure
         singleton.define_method(:send_email, original)
+        singleton.define_method(:lift_suppression, original_lift)
       end
     end
   end

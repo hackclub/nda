@@ -41,6 +41,43 @@ class LoopsClientTest < ActiveSupport::TestCase
     end
   end
 
+  test "lifts a suppression before sending" do
+    requests = []
+    responses = [
+      http_response("200", { isSuppressed: true }.to_json),
+      http_response("200", { success: true }.to_json)
+    ]
+
+    with_http_response(responses, capture: ->(value) { requests << value }) do
+      with_env("LOOPS_API_KEY" => "test-key") do
+        assert LoopsClient.lift_suppression("parent+nda@example.com")
+      end
+    end
+
+    assert_equal %w[GET DELETE], requests.map(&:method)
+    assert_equal "/api/v1/contacts/suppression?email=parent%2Bnda%40example.com", requests.last.path
+    assert_equal "Bearer test-key", requests.last["Authorization"]
+  end
+
+  test "leaves an address that is not suppressed alone" do
+    requests = []
+    with_http_response(http_response("200", { isSuppressed: false }.to_json), capture: ->(value) { requests << value }) do
+      with_env("LOOPS_API_KEY" => "test-key") do
+        refute LoopsClient.lift_suppression("parent@example.com")
+      end
+    end
+
+    assert_equal %w[GET], requests.map(&:method)
+  end
+
+  test "treats an unknown contact as not suppressed" do
+    with_http_response(http_response("404", { success: false }.to_json)) do
+      with_env("LOOPS_API_KEY" => "test-key") do
+        refute LoopsClient.lift_suppression("stranger@example.com")
+      end
+    end
+  end
+
   private
 
   def http_response(code, body)
@@ -50,12 +87,16 @@ class LoopsClientTest < ActiveSupport::TestCase
     end
   end
 
-  def with_http_response(response, capture: nil)
+  def with_http_response(responses, capture: nil)
+    queue = Array(responses)
     singleton = Net::HTTP.singleton_class
     original = singleton.instance_method(:start)
     singleton.define_method(:start) do |*, **, &block|
       client = Object.new
-      client.define_singleton_method(:request) { |request| capture&.call(request); response }
+      client.define_singleton_method(:request) do |request|
+        capture&.call(request)
+        queue.size > 1 ? queue.shift : queue.first
+      end
       block.call(client)
     end
     yield
