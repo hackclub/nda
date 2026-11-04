@@ -10,7 +10,7 @@ The agreement in `app/models/nda_document.rb` is based on the Hack Club Contribu
 
 ## Stack
 
-- Ruby 3.4.10 (`/.ruby-version`), Rails 8.1, Minitest
+- Ruby 3.4.12 (`/.ruby-version`), Rails 8.1, Minitest
 - PostgreSQL 18
 - Vite + vanilla JS/CSS via `vite_rails` (no React, no importmap, no Tailwind in the frontend pipeline)
 - `countries` gem for the ISO 3166-1 list; Twemoji flag SVGs vendored, not installed from npm
@@ -219,5 +219,5 @@ Other rules:
 
 - Do not commit secrets, NDA PDFs of real people, or production credentials.
 - Do not “fix” the legal text without a version bump and an explicit request.
-- Do not replace Bun with npm/yarn, Ruby 3.4.10 with another series, or Postgres 18 with another major.
+- Do not replace Bun with npm/yarn, Ruby 3.4.12 with another series, or Postgres 18 with another major.
 - Do not add a second source of agent instructions. Edit this file; `CLAUDE.md` is a symlink to it.

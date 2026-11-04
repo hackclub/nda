@@ -4,7 +4,7 @@ a proper nda system for Hack Clubbers, with a public API for checking if a user 
 
 ## the stack
 
-- ruby (3.4.10) on rails 8.1 baby!
+- ruby (3.4.12) on rails 8.1 baby!
 - [docker hardened images](https://docs.docker.com/dhi/)
 - postgresql 18
 - vite with bun
