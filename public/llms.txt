@@ -9,6 +9,7 @@ Signing requires Hack Club Auth and a personal details, video pledge, and agreem
 - [API documentation](https://nda.hackclub.com/api/v1/docs): Request examples, response fields, and rate limits. No authentication required.
 - [OpenAPI specification](https://nda.hackclub.com/openapi.json): Machine-readable API contract.
 - [Source code](https://github.com/hackclub/nda): Application and development documentation.
+- [Information for families](https://nda.hackclub.com/info): A plain-English guide to the NDA for members, parents, and guardians. Informational only; the agreement itself remains authoritative.
 
 GET https://nda.hackclub.com/api/v1/nda_status/{info}, replacing {info} with a Slack ID or URL-encoded email address. Unknown identifiers return status "not_signed"; malformed identifiers return HTTP 400. Signed responses include nda_version, signed_at, and signature_type ("native" or "legacy"). Both signature types are valid; do not deny access solely because a signature is legacy. A not_signed response also includes nda_version. Slack lookups include slack_id; email lookups omit it.
 
